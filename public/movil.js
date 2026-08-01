@@ -238,11 +238,52 @@ $('#btnBorrarUpd').onclick = () => {
 
 /* ---------- Pedidos de repuestos ---------- */
 
+/* Artículos que se van sumando antes de guardar. Cada uno termina siendo
+   un pedido propio, para que compras los mueva de estado por separado. */
+let borrador = [];
+
+function renderBorrador() {
+  const ul = $('#pLista');
+  ul.innerHTML = borrador.map((a, i) => `
+    <li class="ped-item">
+      <span class="ped-item-cant">×${a.cantidad}</span>
+      <span class="ped-item-desc">${escapar(a.descripcion)}</span>
+      <button type="button" class="ped-item-quitar" data-quitar="${i}" title="Quitar">×</button>
+    </li>`).join('');
+  ul.classList.toggle('hidden', !borrador.length);
+  $('#hPedTitulo').textContent = borrador.length
+    ? `Nuevo pedido · ${borrador.length} artículo${borrador.length === 1 ? '' : 's'}`
+    : 'Nuevo pedido';
+}
+
+$('#pLista').addEventListener('click', ev => {
+  const b = ev.target.closest('[data-quitar]');
+  if (!b) return;
+  borrador.splice(Number(b.dataset.quitar), 1);
+  renderBorrador();
+});
+
+/* Pasa lo escrito a la lista y deja los campos listos para el siguiente. */
+function sumarArticulo() {
+  const descripcion = $('#pDescripcion').value.trim();
+  if (!descripcion) { $('#pDescripcion').focus(); return false; }
+  borrador.push({ descripcion, cantidad: Number($('#pCantidad').value) || 1 });
+  $('#pDescripcion').value = '';
+  $('#pCantidad').value = 1;
+  renderBorrador();
+  $('#pDescripcion').focus();
+  return true;
+}
+
+$('#btnAgregarArticulo').onclick = sumarArticulo;
+
 function abrirHojaPedido(idx = null) {
   const v = vehiculoPorId(vehiculoAbierto);
   if (!v) return;
   pedidoEditando = idx;
   const p = idx === null ? {} : (v.pedidos?.[idx] || {});
+  borrador = [];
+  renderBorrador();
 
   $('#hPedTitulo').textContent = idx === null ? 'Nuevo pedido' : 'Editar pedido';
   // El vehículo y el solicitante salen del contexto: no se preguntan.
@@ -251,6 +292,9 @@ function abrirHojaPedido(idx = null) {
     : `${v.patente} · ${pedidoEstadoPorId(p.estado).label} · solicitado ${fechaRelativa(p.fecha)}`;
   $('#pDescripcion').value = p.descripcion || '';
   $('#pCantidad').value = p.cantidad || 1;
+
+  // Editando un pedido existente se toca solo ese: sin lista ni "+".
+  $('#zonaAgregar').classList.toggle('hidden', idx !== null);
   $('#btnBorrarPedido').classList.toggle('hidden', idx === null);
   abrirHoja('#hojaPedido');
   $('#pDescripcion').focus();
@@ -264,22 +308,30 @@ $('#formPedido').addEventListener('submit', ev => {
   if (!v) return;
 
   const descripcion = $('#pDescripcion').value.trim();
-  if (!descripcion) { cerrarHojas(); return; }
-
-  const anterior = pedidoEditando === null ? {} : (v.pedidos[pedidoEditando] || {});
-
-  const p = {
-    ...anterior,                       // conserva el estado que le puso compras
-    descripcion,
-    cantidad: Number($('#pCantidad').value) || 1,
-    solicitante: anterior.solicitante || usuario?.nombre || localStorage.getItem('ultimoOperario') || '',
-    estado: anterior.estado || PEDIDO_DEFECTO,
-    fecha: anterior.fecha || hoyISO(),
-  };
-
   v.pedidos ||= [];
-  if (pedidoEditando === null) v.pedidos.push(p);
-  else v.pedidos[pedidoEditando] = p;
+
+  if (pedidoEditando !== null) {
+    // Edición de un pedido existente: se conserva lo que puso compras.
+    if (!descripcion) { cerrarHojas(); return; }
+    const anterior = v.pedidos[pedidoEditando] || {};
+    v.pedidos[pedidoEditando] = {
+      ...anterior,
+      descripcion,
+      cantidad: Number($('#pCantidad').value) || 1,
+    };
+  } else {
+    // Alta: lo que quedó escrito se suma a la lista y se guarda todo junto.
+    if (descripcion) sumarArticulo();
+    if (!borrador.length) { cerrarHojas(); return; }
+
+    const base = {
+      solicitante: usuario?.nombre || localStorage.getItem('ultimoOperario') || '',
+      estado: PEDIDO_DEFECTO,
+      fecha: hoyISO(),
+    };
+    for (const a of borrador) v.pedidos.push({ ...base, ...a });
+    borrador = [];
+  }
 
   guardarVehiculo(v);
   cerrarHojas();

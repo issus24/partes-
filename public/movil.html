@@ -125,11 +125,22 @@
       <h2 id="hPedTitulo">Pedido de repuestos</h2>
       <p class="hoja-meta" id="hPedMeta"></p>
 
-      <label>Artículo</label>
-      <textarea id="pDescripcion" rows="3" placeholder="Ej: Rótula inferior lado derecho"></textarea>
+      <!-- Artículos ya sumados a este pedido -->
+      <ul id="pLista" class="ped-lista"></ul>
 
-      <label>Cantidad</label>
-      <input id="pCantidad" type="number" min="1" step="1" value="1" inputmode="numeric">
+      <label>Artículo</label>
+      <textarea id="pDescripcion" rows="2" placeholder="Ej: Rótula inferior lado derecho"></textarea>
+
+      <div class="hoja-fila">
+        <div>
+          <label>Cantidad</label>
+          <input id="pCantidad" type="number" min="1" step="1" value="1" inputmode="numeric">
+        </div>
+        <div class="crecer" id="zonaAgregar">
+          <label>&nbsp;</label>
+          <button type="button" id="btnAgregarArticulo" class="ped-add" title="Agregar este artículo y cargar otro">+</button>
+        </div>
+      </div>
 
       <div class="hoja-acciones">
         <button type="button" id="btnBorrarPedido" class="m-btn m-btn-danger hidden">Eliminar</button>
