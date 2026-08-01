@@ -69,9 +69,7 @@ function renderLista() {
         <div class="m-item-est">${escapar(est.label)}</div>
         <div class="m-item-meta">${escapar(meta)}</div>
       </div>
-      <div class="m-item-badges">
-        ${abiertos ? `<span class="m-badge">${abiertos} pedido${abiertos === 1 ? '' : 's'}</span>` : ''}
-      </div>
+      ${abiertos ? `<div class="m-item-badges"><span class="m-badge">${abiertos} pedido${abiertos === 1 ? '' : 's'}</span></div>` : ''}
       <span class="m-flecha">›</span>`;
     li.onclick = () => abrirDetalle(v.id);
     ul.appendChild(li);
