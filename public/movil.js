@@ -244,14 +244,13 @@ function abrirHojaPedido(idx = null) {
   pedidoEditando = idx;
   const p = idx === null ? {} : (v.pedidos?.[idx] || {});
 
-  $('#hPedTitulo').textContent = idx === null ? 'Nuevo pedido de repuestos' : 'Pedido de repuestos';
-  $('#hPedMeta').textContent = v.patente + (p.fecha ? ` — solicitado ${fechaRelativa(p.fecha)}` : '');
+  $('#hPedTitulo').textContent = idx === null ? 'Nuevo pedido' : 'Editar pedido';
+  // El vehículo y el solicitante salen del contexto: no se preguntan.
+  $('#hPedMeta').textContent = idx === null
+    ? v.patente
+    : `${v.patente} · ${pedidoEstadoPorId(p.estado).label} · solicitado ${fechaRelativa(p.fecha)}`;
   $('#pDescripcion').value = p.descripcion || '';
   $('#pCantidad').value = p.cantidad || 1;
-  $('#pUrgencia').value = p.urgente ? '1' : '';
-  $('#pSolicitante').value = p.solicitante || localStorage.getItem('ultimoOperario') || '';
-  $('#pEstado').value = p.estado || PEDIDO_DEFECTO;
-  $('#pNota').value = p.nota || '';
   $('#btnBorrarPedido').classList.toggle('hidden', idx === null);
   abrirHoja('#hojaPedido');
   $('#pDescripcion').focus();
@@ -267,21 +266,20 @@ $('#formPedido').addEventListener('submit', ev => {
   const descripcion = $('#pDescripcion').value.trim();
   if (!descripcion) { cerrarHojas(); return; }
 
+  const anterior = pedidoEditando === null ? {} : (v.pedidos[pedidoEditando] || {});
+
   const p = {
+    ...anterior,                       // conserva el estado que le puso compras
     descripcion,
     cantidad: Number($('#pCantidad').value) || 1,
-    urgente: $('#pUrgencia').value === '1',
-    solicitante: $('#pSolicitante').value.trim(),
-    estado: $('#pEstado').value,
-    nota: $('#pNota').value.trim(),
-    fecha: pedidoEditando === null ? hoyISO() : (v.pedidos[pedidoEditando].fecha || hoyISO()),
+    solicitante: anterior.solicitante || usuario?.nombre || localStorage.getItem('ultimoOperario') || '',
+    estado: anterior.estado || PEDIDO_DEFECTO,
+    fecha: anterior.fecha || hoyISO(),
   };
 
   v.pedidos ||= [];
   if (pedidoEditando === null) v.pedidos.push(p);
   else v.pedidos[pedidoEditando] = p;
-
-  if (p.solicitante) localStorage.setItem('ultimoOperario', p.solicitante);
 
   guardarVehiculo(v);
   cerrarHojas();
@@ -316,7 +314,6 @@ function mostrarConexion(ok, usr) {
 
 /* ---------- Arranque ---------- */
 
-$('#pEstado').innerHTML = ESTADOS_PEDIDO.map(e => `<option value="${e.id}">${e.label}</option>`).join('');
 $('#hSectores').innerHTML = SECTORES.map(s => `<option value="${s}">`).join('');
 renderLista();
 

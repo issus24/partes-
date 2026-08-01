@@ -125,31 +125,11 @@
       <h2 id="hPedTitulo">Pedido de repuestos</h2>
       <p class="hoja-meta" id="hPedMeta"></p>
 
-      <label>Repuesto</label>
+      <label>Artículo</label>
       <textarea id="pDescripcion" rows="3" placeholder="Ej: Rótula inferior lado derecho"></textarea>
 
-      <div class="hoja-fila">
-        <div>
-          <label>Cantidad</label>
-          <input id="pCantidad" type="number" min="1" step="1" value="1" inputmode="numeric">
-        </div>
-        <div class="crecer">
-          <label>Urgencia</label>
-          <select id="pUrgencia">
-            <option value="">Normal</option>
-            <option value="1">Urgente</option>
-          </select>
-        </div>
-      </div>
-
-      <label>Solicitado por</label>
-      <input id="pSolicitante" placeholder="Tu nombre" autocomplete="off">
-
-      <label>Estado del pedido</label>
-      <select id="pEstado"></select>
-
-      <label>Nota para compras <span class="op">(opcional)</span></label>
-      <textarea id="pNota" rows="2" placeholder="Nº de parte, marca, dónde conseguirlo…"></textarea>
+      <label>Cantidad</label>
+      <input id="pCantidad" type="number" min="1" step="1" value="1" inputmode="numeric">
 
       <div class="hoja-acciones">
         <button type="button" id="btnBorrarPedido" class="m-btn m-btn-danger hidden">Eliminar</button>
