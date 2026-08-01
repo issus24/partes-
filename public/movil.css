@@ -36,7 +36,7 @@ body { overflow: hidden; }
 
 /* En tablets y en horizontal el contenido no se estira a lo ancho de más. */
 @media (min-width: 720px) {
-  .m-header, .m-buscar, .m-chips, .m-lista, .m-scroll {
+  .m-header, .m-buscar, .m-lista, .m-scroll {
     padding-left: max(var(--lado), calc((100% - 680px) / 2));
     padding-right: max(var(--lado), calc((100% - 680px) / 2));
   }
@@ -100,7 +100,7 @@ body { overflow: hidden; }
 }
 
 /* ---------- Buscador y filtros ---------- */
-.m-buscar { padding: 9px var(--lado) 5px; flex: 0 0 auto; }
+.m-buscar { padding: 9px var(--lado); flex: 0 0 auto; }
 .m-buscar input {
   width: 100%;
   background: var(--panel-2);
@@ -112,36 +112,6 @@ body { overflow: hidden; }
   font-size: 15px;
 }
 .m-buscar input:focus { outline: none; border-color: var(--accent); }
-
-.m-chips {
-  display: flex;
-  gap: 6px;
-  padding: 4px var(--lado) 8px;
-  overflow-x: auto;
-  flex: 0 0 auto;
-  scrollbar-width: none;
-  /* El degradado del borde derecho avisa que la fila sigue. */
-  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent);
-  mask-image: linear-gradient(to right, #000 calc(100% - 26px), transparent);
-}
-.m-chips::-webkit-scrollbar { display: none; }
-
-.m-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  white-space: nowrap;
-  padding: 5px 11px;
-  border-radius: 100px;
-  border: 1px solid var(--line);
-  background: var(--panel-2);
-  color: var(--txt-dim);
-  font-size: 12.5px;
-  font-family: inherit;
-  cursor: pointer;
-}
-.m-chip .dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; }
-.m-chip.on { color: var(--txt); border-color: currentColor; }
 
 /* ---------- Lista de patentes ---------- */
 .m-lista {

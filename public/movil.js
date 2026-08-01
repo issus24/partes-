@@ -6,10 +6,7 @@
 
 const $ = sel => document.querySelector(sel);
 
-const vista = {
-  buscar: '',
-  estadosVisibles: new Set(ESTADOS.map(e => e.id)),
-};
+const vista = { buscar: '' };
 
 let vehiculoAbierto = null;   // id del vehículo en pantalla de detalle
 let updEditando = null;       // { fecha, idx } | null si es nueva
@@ -17,30 +14,10 @@ let pedidoEditando = null;    // índice | null si es nuevo
 
 /* ---------- Lista ---------- */
 
-function renderChips() {
-  $('#mFiltros').innerHTML = '';
-  for (const e of ESTADOS) {
-    const b = document.createElement('button');
-    b.className = 'm-chip' + (vista.estadosVisibles.has(e.id) ? ' on' : '');
-    b.style.color = vista.estadosVisibles.has(e.id) ? e.color : '';
-    b.innerHTML = `<span class="dot" style="background:${e.color}"></span>${e.label}`;
-    b.onclick = () => {
-      if (vista.estadosVisibles.has(e.id)) vista.estadosVisibles.delete(e.id);
-      else vista.estadosVisibles.add(e.id);
-      renderChips();
-      renderLista();
-    };
-    $('#mFiltros').appendChild(b);
-  }
-}
-
 function vehiculosFiltrados() {
   const q = vista.buscar.trim();
-  return datos.vehiculos.filter(v => {
-    if (!vista.estadosVisibles.has(v.estado)) return false;
-    if (!q) return true;
-    return normalizar(textoBuscable(v)).includes(normalizar(q));
-  });
+  if (!q) return datos.vehiculos;
+  return datos.vehiculos.filter(v => normalizar(textoBuscable(v)).includes(normalizar(q)));
 }
 
 function renderLista() {
@@ -341,7 +318,6 @@ function mostrarConexion(ok, usr) {
 
 $('#pEstado').innerHTML = ESTADOS_PEDIDO.map(e => `<option value="${e.id}">${e.label}</option>`).join('');
 $('#hSectores').innerHTML = SECTORES.map(s => `<option value="${s}">`).join('');
-renderChips();
 renderLista();
 
 iniciarSync(() => {
