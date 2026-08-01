@@ -1,0 +1,17 @@
+{
+  "name": "parte-de-trabajo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Parte de trabajo del taller: grilla de escritorio y app móvil para el mecánico.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch server/index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "pg": "^8.13.1"
+  }
+}

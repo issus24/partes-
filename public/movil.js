@@ -1,0 +1,353 @@
+/* ============================================================
+   Parte de Trabajo — vista móvil (para el mecánico)
+   Lista compacta de patentes → detalle → actualizaciones y pedidos.
+   Requiere core.js cargado antes que este archivo.
+   ============================================================ */
+
+const $ = sel => document.querySelector(sel);
+
+const vista = {
+  buscar: '',
+  estadosVisibles: new Set(ESTADOS.map(e => e.id)),
+};
+
+let vehiculoAbierto = null;   // id del vehículo en pantalla de detalle
+let updEditando = null;       // { fecha, idx } | null si es nueva
+let pedidoEditando = null;    // índice | null si es nuevo
+
+/* ---------- Lista ---------- */
+
+function renderChips() {
+  $('#mFiltros').innerHTML = '';
+  for (const e of ESTADOS) {
+    const b = document.createElement('button');
+    b.className = 'm-chip' + (vista.estadosVisibles.has(e.id) ? ' on' : '');
+    b.style.color = vista.estadosVisibles.has(e.id) ? e.color : '';
+    b.innerHTML = `<span class="dot" style="background:${e.color}"></span>${e.label}`;
+    b.onclick = () => {
+      if (vista.estadosVisibles.has(e.id)) vista.estadosVisibles.delete(e.id);
+      else vista.estadosVisibles.add(e.id);
+      renderChips();
+      renderLista();
+    };
+    $('#mFiltros').appendChild(b);
+  }
+}
+
+function vehiculosFiltrados() {
+  const q = vista.buscar.trim();
+  return datos.vehiculos.filter(v => {
+    if (!vista.estadosVisibles.has(v.estado)) return false;
+    if (!q) return true;
+    return normalizar(textoBuscable(v)).includes(normalizar(q));
+  });
+}
+
+function renderLista() {
+  const lista = vehiculosFiltrados();
+  const ul = $('#mLista');
+  ul.innerHTML = '';
+
+  for (const v of lista) {
+    const est = estadoPorId(v.estado);
+    const abiertos = pedidosAbiertos(v).length;
+    const ultima = ultimaFechaUpdate(v);
+    const nProb = (v.problemas || []).length;
+
+    const meta = [
+      nProb ? `${nProb} problema${nProb === 1 ? '' : 's'}` : '',
+      ultima ? `novedad ${fechaRelativa(ultima)}` : 'sin novedades',
+    ].filter(Boolean).join(' · ');
+
+    const li = document.createElement('li');
+    li.className = 'm-item';
+    li.style.setProperty('--est', est.color);
+    li.dataset.id = v.id;
+    li.innerHTML = `
+      <div class="m-item-main">
+        <div class="m-item-pat">${escapar(v.patente)}</div>
+        <div class="m-item-est">${escapar(est.label)}</div>
+        <div class="m-item-meta">${escapar(meta)}</div>
+      </div>
+      <div class="m-item-badges">
+        ${abiertos ? `<span class="m-badge">${abiertos} pedido${abiertos === 1 ? '' : 's'}</span>` : ''}
+      </div>
+      <span class="m-flecha">›</span>`;
+    li.onclick = () => abrirDetalle(v.id);
+    ul.appendChild(li);
+  }
+
+  $('#mVacio').classList.toggle('hidden', lista.length > 0);
+  $('#mContador').textContent =
+    `${lista.length} de ${datos.vehiculos.length} unidad${datos.vehiculos.length === 1 ? '' : 'es'}`;
+}
+
+$('#mBuscar').addEventListener('input', e => { vista.buscar = e.target.value; renderLista(); });
+
+/* ---------- Detalle ---------- */
+
+function abrirDetalle(id) {
+  vehiculoAbierto = id;
+  renderDetalle();
+  $('#pantallaLista').classList.add('oculta');
+  $('#pantallaDetalle').classList.remove('oculta');
+  history.pushState({ detalle: id }, '');
+}
+
+function volverALista() {
+  vehiculoAbierto = null;
+  $('#pantallaDetalle').classList.add('oculta');
+  $('#pantallaLista').classList.remove('oculta');
+  renderLista();
+}
+
+$('#btnVolver').onclick = () => history.back();
+
+/* El botón físico "atrás" del celular cierra el detalle en vez de salir. */
+window.addEventListener('popstate', () => {
+  if (vehiculoAbierto) volverALista();
+});
+
+function renderDetalle() {
+  const v = vehiculoPorId(vehiculoAbierto);
+  if (!v) return volverALista();
+
+  const dias = v.ingreso ? diffDias(v.ingreso, hoyISO()) : null;
+  $('#dPatente').textContent = v.patente;
+  $('#dSub').textContent = dias === null ? '' : `${dias} día${dias === 1 ? '' : 's'} en taller`;
+
+  // --- Estado (tocar para cambiar) ---
+  const cont = $('#dEstados');
+  cont.innerHTML = '';
+  for (const e of ESTADOS) {
+    const b = document.createElement('button');
+    b.className = 'm-est-btn' + (v.estado === e.id ? ' on' : '');
+    b.style.color = v.estado === e.id ? e.color : '';
+    b.innerHTML = `<span class="dot" style="background:${e.color}"></span>${e.label}`;
+    b.onclick = () => { v.estado = e.id; guardarVehiculo(v); renderDetalle(); };
+    cont.appendChild(b);
+  }
+
+  // --- Problemas ---
+  const probs = v.problemas || [];
+  $('#dProblemas').innerHTML = probs.length
+    ? probs.map(p => {
+        const c = categoriaPorId(p.categoria);
+        return `<div class="m-prob" style="--cat:${c.color}">
+                  <span class="m-prob-cat">${escapar(c.label)}</span>
+                  <span class="m-prob-txt">${escapar(p.texto)}</span>
+                </div>`;
+      }).join('')
+    : '<p class="m-nada">Sin problemas cargados.</p>';
+
+  // --- Pedidos ---
+  const peds = v.pedidos || [];
+  $('#dPedidos').innerHTML = peds.length
+    ? peds.map((p, i) => {
+        const e = pedidoEstadoPorId(p.estado);
+        return `<div class="m-pedido" style="--ped:${e.color}" data-ped="${i}">
+                  <div class="m-ped-top">
+                    <span class="m-ped-cant">×${p.cantidad || 1}</span>
+                    <span class="m-ped-desc">${escapar(p.descripcion)}</span>
+                  </div>
+                  <div class="m-ped-pie">
+                    <span class="m-ped-estado">${escapar(e.label)}</span>
+                    ${p.urgente ? '<span class="m-urgente">URGENTE</span>' : ''}
+                    <span>${escapar(p.solicitante || '')}${p.solicitante && p.fecha ? ' · ' : ''}${p.fecha ? fechaRelativa(p.fecha) : ''}</span>
+                  </div>
+                </div>`;
+      }).join('')
+    : '<p class="m-nada">Sin pedidos de repuestos.</p>';
+
+  // --- Actualizaciones, de la más reciente a la más vieja ---
+  const fechas = fechasConUpdates(v);
+  $('#dUpdates').innerHTML = fechas.length
+    ? fechas.map(f => `
+        <div class="m-dia">
+          <div class="m-dia-fecha"><b>${fechaLarga(f)}</b> · ${fechaRelativa(f)}</div>
+          ${v.updates[f].map((u, i) => `
+            <div class="m-upd" style="--sec:${colorSector(u.sector)}" data-fecha="${f}" data-idx="${i}">
+              ${u.sector ? `<div class="m-upd-sector">${escapar(u.sector)}</div>` : ''}
+              <div class="m-upd-txt">${escapar(u.texto || '')}</div>
+              ${u.operario ? `<div class="m-upd-pie">${escapar(u.operario)}</div>` : ''}
+            </div>`).join('')}
+        </div>`).join('')
+    : '<p class="m-nada">Todavía no hay actualizaciones.</p>';
+}
+
+/* Delegación: tocar una actualización o un pedido lo abre para editar. */
+$('#dUpdates').addEventListener('click', ev => {
+  const el = ev.target.closest('.m-upd');
+  if (el) abrirHojaUpd(el.dataset.fecha, Number(el.dataset.idx));
+});
+
+$('#dPedidos').addEventListener('click', ev => {
+  const el = ev.target.closest('[data-ped]');
+  if (el) abrirHojaPedido(Number(el.dataset.ped));
+});
+
+/* ---------- Hojas ---------- */
+
+function abrirHoja(sel) { $(sel).classList.remove('oculta'); }
+function cerrarHojas() {
+  $('#hojaUpd').classList.add('oculta');
+  $('#hojaPedido').classList.add('oculta');
+}
+document.querySelectorAll('[data-cerrar-hoja]').forEach(el => el.onclick = cerrarHojas);
+
+/* ---------- Actualizaciones ---------- */
+
+function abrirHojaUpd(fecha = null, idx = null) {
+  const v = vehiculoPorId(vehiculoAbierto);
+  if (!v) return;
+  const f = fecha || hoyISO();
+  const u = idx === null ? {} : (v.updates?.[f]?.[idx] || {});
+  updEditando = { fecha: f, idx };
+
+  $('#hUpdTitulo').textContent = idx === null ? 'Nueva actualización' : 'Editar actualización';
+  $('#hUpdMeta').textContent = v.patente;
+  $('#hSector').value = u.sector || localStorage.getItem('ultimoSector') || '';
+  $('#hTexto').value = u.texto || '';
+  $('#hOperario').value = u.operario || localStorage.getItem('ultimoOperario') || '';
+  $('#hFecha').value = f;
+  $('#btnBorrarUpd').classList.toggle('hidden', idx === null);
+  abrirHoja('#hojaUpd');
+  $('#hTexto').focus();
+}
+
+$('#btnNuevaUpd').onclick = () => abrirHojaUpd();
+
+$('#formUpd').addEventListener('submit', ev => {
+  ev.preventDefault();
+  const v = vehiculoPorId(vehiculoAbierto);
+  if (!v || !updEditando) return;
+
+  const u = {
+    sector: $('#hSector').value.trim(),
+    texto: $('#hTexto').value.trim(),
+    operario: $('#hOperario').value.trim(),
+  };
+  const fechaNueva = $('#hFecha').value || hoyISO();
+  const { fecha, idx } = updEditando;
+
+  if (!u.texto && !u.sector && !u.operario) { cerrarHojas(); return; }
+
+  v.updates ||= {};
+  // Si se cambió la fecha, la actualización se muda de día.
+  if (idx !== null) {
+    v.updates[fecha].splice(idx, 1);
+    if (!v.updates[fecha].length) delete v.updates[fecha];
+  }
+  (v.updates[fechaNueva] ||= []).push(u);
+
+  // Se recuerdan para no reescribirlos en cada carga.
+  if (u.sector) localStorage.setItem('ultimoSector', u.sector);
+  if (u.operario) localStorage.setItem('ultimoOperario', u.operario);
+
+  guardarVehiculo(v);
+  cerrarHojas();
+  renderDetalle();
+});
+
+$('#btnBorrarUpd').onclick = () => {
+  const v = vehiculoPorId(vehiculoAbierto);
+  const { fecha, idx } = updEditando || {};
+  if (!v || idx === null || idx === undefined) return;
+  if (!confirm('¿Eliminar esta actualización?')) return;
+  v.updates[fecha].splice(idx, 1);
+  if (!v.updates[fecha].length) delete v.updates[fecha];
+  guardarVehiculo(v);
+  cerrarHojas();
+  renderDetalle();
+};
+
+/* ---------- Pedidos de repuestos ---------- */
+
+function abrirHojaPedido(idx = null) {
+  const v = vehiculoPorId(vehiculoAbierto);
+  if (!v) return;
+  pedidoEditando = idx;
+  const p = idx === null ? {} : (v.pedidos?.[idx] || {});
+
+  $('#hPedTitulo').textContent = idx === null ? 'Nuevo pedido de repuestos' : 'Pedido de repuestos';
+  $('#hPedMeta').textContent = v.patente + (p.fecha ? ` — solicitado ${fechaRelativa(p.fecha)}` : '');
+  $('#pDescripcion').value = p.descripcion || '';
+  $('#pCantidad').value = p.cantidad || 1;
+  $('#pUrgencia').value = p.urgente ? '1' : '';
+  $('#pSolicitante').value = p.solicitante || localStorage.getItem('ultimoOperario') || '';
+  $('#pEstado').value = p.estado || PEDIDO_DEFECTO;
+  $('#pNota').value = p.nota || '';
+  $('#btnBorrarPedido').classList.toggle('hidden', idx === null);
+  abrirHoja('#hojaPedido');
+  $('#pDescripcion').focus();
+}
+
+$('#btnNuevoPedido').onclick = () => abrirHojaPedido();
+
+$('#formPedido').addEventListener('submit', ev => {
+  ev.preventDefault();
+  const v = vehiculoPorId(vehiculoAbierto);
+  if (!v) return;
+
+  const descripcion = $('#pDescripcion').value.trim();
+  if (!descripcion) { cerrarHojas(); return; }
+
+  const p = {
+    descripcion,
+    cantidad: Number($('#pCantidad').value) || 1,
+    urgente: $('#pUrgencia').value === '1',
+    solicitante: $('#pSolicitante').value.trim(),
+    estado: $('#pEstado').value,
+    nota: $('#pNota').value.trim(),
+    fecha: pedidoEditando === null ? hoyISO() : (v.pedidos[pedidoEditando].fecha || hoyISO()),
+  };
+
+  v.pedidos ||= [];
+  if (pedidoEditando === null) v.pedidos.push(p);
+  else v.pedidos[pedidoEditando] = p;
+
+  if (p.solicitante) localStorage.setItem('ultimoOperario', p.solicitante);
+
+  guardarVehiculo(v);
+  cerrarHojas();
+  renderDetalle();
+});
+
+$('#btnBorrarPedido').onclick = () => {
+  const v = vehiculoPorId(vehiculoAbierto);
+  if (!v || pedidoEditando === null) return;
+  if (!confirm('¿Eliminar este pedido?')) return;
+  v.pedidos.splice(pedidoEditando, 1);
+  guardarVehiculo(v);
+  cerrarHojas();
+  renderDetalle();
+};
+
+/* ---------- Estado de la conexión ---------- */
+
+function mostrarConexion(ok, usr) {
+  const el = $('#mConexion');
+  const pend = cambiosPendientes();
+  if (!HAY_SERVIDOR) {
+    el.className = 'm-conexion local';
+    el.textContent = 'sin servidor';
+    return;
+  }
+  el.className = 'm-conexion ' + (ok ? 'ok' : 'off');
+  el.textContent = ok
+    ? (usr ? usr.nombre : 'en línea')
+    : (pend ? `sin señal · ${pend} sin enviar` : 'sin señal');
+}
+
+/* ---------- Arranque ---------- */
+
+$('#pEstado').innerHTML = ESTADOS_PEDIDO.map(e => `<option value="${e.id}">${e.label}</option>`).join('');
+$('#hSectores').innerHTML = SECTORES.map(s => `<option value="${s}">`).join('');
+renderChips();
+renderLista();
+
+iniciarSync(() => {
+  renderLista();
+  if (vehiculoAbierto) renderDetalle();
+}, mostrarConexion);
+mostrarConexion(false);

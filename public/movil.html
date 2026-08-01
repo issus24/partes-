@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0f1218">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Parte de Trabajo — Taller</title>
+  <link rel="stylesheet" href="movil.css">
+</head>
+<body>
+
+  <!-- ============ LISTA ============ -->
+  <section id="pantallaLista" class="pantalla">
+    <header class="m-header">
+      <div class="m-title">
+        <h1>Taller</h1>
+        <span id="mContador" class="m-sub"></span>
+        <span id="mConexion" class="m-conexion"></span>
+      </div>
+      <a class="m-link" href="index.html" title="Vista de escritorio">🖥</a>
+    </header>
+
+    <div class="m-buscar">
+      <input id="mBuscar" type="search" placeholder="Buscar patente o problema…" autocomplete="off">
+    </div>
+
+    <div id="mFiltros" class="m-chips"></div>
+
+    <ul id="mLista" class="m-lista"></ul>
+
+    <p id="mVacio" class="m-vacio hidden">No hay vehículos que coincidan.</p>
+  </section>
+
+  <!-- ============ DETALLE ============ -->
+  <section id="pantallaDetalle" class="pantalla oculta">
+    <header class="m-header">
+      <button id="btnVolver" class="m-volver">‹</button>
+      <div class="m-title">
+        <h1 id="dPatente">—</h1>
+        <span id="dSub" class="m-sub"></span>
+      </div>
+    </header>
+
+    <div class="m-scroll">
+      <!-- Estado -->
+      <div class="m-bloque">
+        <h2 class="m-h2">Estado</h2>
+        <div id="dEstados" class="m-estados"></div>
+      </div>
+
+      <!-- Problemas -->
+      <div class="m-bloque">
+        <h2 class="m-h2">Problemas de ingreso</h2>
+        <div id="dProblemas" class="m-probs"></div>
+      </div>
+
+      <!-- Pedidos -->
+      <div class="m-bloque">
+        <h2 class="m-h2">
+          Pedidos de repuestos
+          <button id="btnNuevoPedido" class="m-mini">+ Pedir</button>
+        </h2>
+        <div id="dPedidos" class="m-pedidos"></div>
+      </div>
+
+      <!-- Actualizaciones -->
+      <div class="m-bloque">
+        <h2 class="m-h2">
+          Actualizaciones
+          <button id="btnNuevaUpd" class="m-mini">+ Nueva</button>
+        </h2>
+        <div id="dUpdates" class="m-timeline"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ HOJA: actualización ============ -->
+  <div id="hojaUpd" class="hoja oculta">
+    <div class="hoja-fondo" data-cerrar-hoja></div>
+    <form class="hoja-panel" id="formUpd">
+      <div class="hoja-agarre"></div>
+      <h2 id="hUpdTitulo">Nueva actualización</h2>
+      <p class="hoja-meta" id="hUpdMeta"></p>
+
+      <label>Sector</label>
+      <input id="hSector" list="hSectores" placeholder="Taller, Compras…" autocomplete="off">
+      <datalist id="hSectores"></datalist>
+
+      <label>¿Qué pasó?</label>
+      <textarea id="hTexto" rows="4" placeholder="Ej: Se desarmó tren delantero."></textarea>
+
+      <label>Responsable</label>
+      <input id="hOperario" placeholder="Tu nombre" autocomplete="off">
+
+      <label>Fecha</label>
+      <input id="hFecha" type="date">
+
+      <div class="hoja-acciones">
+        <button type="button" id="btnBorrarUpd" class="m-btn m-btn-danger hidden">Eliminar</button>
+        <button type="button" class="m-btn" data-cerrar-hoja>Cancelar</button>
+        <button type="submit" class="m-btn m-btn-primary">Guardar</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ============ HOJA: pedido de repuestos ============ -->
+  <div id="hojaPedido" class="hoja oculta">
+    <div class="hoja-fondo" data-cerrar-hoja></div>
+    <form class="hoja-panel" id="formPedido">
+      <div class="hoja-agarre"></div>
+      <h2 id="hPedTitulo">Pedido de repuestos</h2>
+      <p class="hoja-meta" id="hPedMeta"></p>
+
+      <label>Repuesto</label>
+      <textarea id="pDescripcion" rows="3" placeholder="Ej: Rótula inferior lado derecho"></textarea>
+
+      <div class="hoja-fila">
+        <div>
+          <label>Cantidad</label>
+          <input id="pCantidad" type="number" min="1" step="1" value="1" inputmode="numeric">
+        </div>
+        <div class="crecer">
+          <label>Urgencia</label>
+          <select id="pUrgencia">
+            <option value="">Normal</option>
+            <option value="1">Urgente</option>
+          </select>
+        </div>
+      </div>
+
+      <label>Solicitado por</label>
+      <input id="pSolicitante" placeholder="Tu nombre" autocomplete="off">
+
+      <label>Estado del pedido</label>
+      <select id="pEstado"></select>
+
+      <label>Nota para compras <span class="op">(opcional)</span></label>
+      <textarea id="pNota" rows="2" placeholder="Nº de parte, marca, dónde conseguirlo…"></textarea>
+
+      <div class="hoja-acciones">
+        <button type="button" id="btnBorrarPedido" class="m-btn m-btn-danger hidden">Eliminar</button>
+        <button type="button" class="m-btn" data-cerrar-hoja>Cancelar</button>
+        <button type="submit" class="m-btn m-btn-primary">Guardar</button>
+      </div>
+    </form>
+  </div>
+
+  <script src="core.js"></script>
+  <script src="movil.js"></script>
+</body>
+</html>

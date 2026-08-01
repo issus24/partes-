@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Parte de Trabajo — Taller</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">PT</span>
+      <div>
+        <h1>Parte de Trabajo</h1>
+        <p class="sub">Estado diario de vehículos en reparación</p>
+      </div>
+    </div>
+
+    <div class="topbar-actions">
+      <span id="conexion" class="conexion"></span>
+      <button id="btnAddVehiculo" class="btn btn-primary">+ Vehículo</button>
+      <button id="btnHoy" class="btn">Ir a hoy</button>
+      <a class="btn" href="movil.html" title="Vista para celular">📱 Móvil</a>
+      <button id="btnMenu" class="btn btn-icon" title="Más opciones">⋯</button>
+    </div>
+  </header>
+
+  <div id="menuPanel" class="menu-panel hidden">
+    <button data-action="export">Exportar datos (JSON)</button>
+    <button data-action="import">Importar datos (JSON)</button>
+    <button data-action="print">Imprimir / PDF</button>
+    <button data-action="reset" class="danger">Borrar todo</button>
+  </div>
+
+  <section class="filtros">
+    <input id="buscar" type="search" placeholder="Buscar patente o problema…" autocomplete="off">
+    <div class="chips" id="filtroEstados"></div>
+    <label class="toggle">
+      <input type="checkbox" id="ocultarTerminados">
+      <span>Ocultar operativos</span>
+    </label>
+    <span class="contador" id="contador"></span>
+  </section>
+
+  <main class="tabla-wrap">
+    <table class="parte" id="tabla">
+      <thead id="thead"></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div id="vacio" class="vacio hidden">
+      <p>No hay vehículos cargados.</p>
+      <button class="btn btn-primary" data-add-vehiculo>Agregar el primero</button>
+    </div>
+  </main>
+
+  <!-- Modal: vehículo -->
+  <dialog id="dlgVehiculo" class="dlg">
+    <form method="dialog" id="formVehiculo">
+      <h2 id="dlgVehiculoTitulo">Nuevo vehículo</h2>
+      <div class="campo">
+        <label for="vPatente">Patente *</label>
+        <input id="vPatente" name="patente" required maxlength="12" placeholder="AB 123 CD" autocomplete="off">
+      </div>
+      <div class="campo">
+        <label for="vIngreso">Fecha de ingreso</label>
+        <input id="vIngreso" name="ingreso" type="date">
+      </div>
+      <div class="campo">
+        <label>Problemas con los que ingresa <span class="hint">— uno por fila</span></label>
+        <div id="listaProblemas" class="lista-problemas"></div>
+        <button type="button" id="btnAddProblema" class="btn btn-mini">+ Agregar problema</button>
+      </div>
+      <div class="campo">
+        <label>Pedidos de repuestos <span class="hint">— los carga el mecánico desde el celular</span></label>
+        <div id="listaPedidos" class="lista-problemas"></div>
+        <button type="button" id="btnAddPedido" class="btn btn-mini">+ Agregar pedido</button>
+      </div>
+      <div class="campo">
+        <label for="vEstado">Estado</label>
+        <select id="vEstado" name="estado"></select>
+      </div>
+      <footer class="dlg-actions">
+        <button type="button" id="btnBorrarVehiculo" class="btn btn-danger hidden">Eliminar</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn" data-cerrar>Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <!-- Modal: actualización de una celda -->
+  <dialog id="dlgUpdate" class="dlg">
+    <form method="dialog" id="formUpdate">
+      <h2 id="updTitulo">Nueva actualización</h2>
+      <p class="dlg-meta" id="updMeta"></p>
+      <div class="campo">
+        <label for="uSector">Sector que informa</label>
+        <input id="uSector" list="listaSectores" placeholder="Taller, Compras, Administración…" autocomplete="off">
+        <datalist id="listaSectores"></datalist>
+      </div>
+      <div class="campo">
+        <label for="uTexto">Actualización</label>
+        <textarea id="uTexto" rows="4" placeholder="Ej: Preparando cotización para repuestos requeridos."></textarea>
+      </div>
+      <div class="campo">
+        <label for="uOperario">Responsable</label>
+        <input id="uOperario" placeholder="Quién lo hizo / informa" autocomplete="off">
+      </div>
+      <footer class="dlg-actions">
+        <button type="button" id="btnBorrarUpdate" class="btn btn-danger">Eliminar</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn" data-cerrar>Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar</button>
+      </footer>
+    </form>
+  </dialog>
+
+  <input type="file" id="fileImport" accept="application/json" hidden>
+
+  <script src="core.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f1218">
+  <title>Ingresar — Parte de Trabajo</title>
+  <style>
+    :root { --bg:#0f1218; --panel:#161b24; --line:#2a3240; --txt:#e7ecf3; --dim:#8f9bad; --accent:#3d8bfd; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh;
+      display: grid; place-items: center;
+      background: var(--bg); color: var(--txt);
+      font-family: "Segoe UI", system-ui, sans-serif;
+      padding: 20px;
+    }
+    form {
+      width: 100%; max-width: 340px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 26px 22px;
+    }
+    .marca {
+      width: 46px; height: 46px;
+      display: grid; place-items: center;
+      background: var(--accent); color: #fff;
+      font-weight: 700; border-radius: 10px;
+      margin-bottom: 16px;
+    }
+    h1 { font-size: 19px; margin: 0 0 4px; font-weight: 600; }
+    p.sub { margin: 0 0 20px; font-size: 13px; color: var(--dim); }
+    label { display: block; font-size: 12px; color: var(--dim); margin: 14px 0 5px; }
+    input {
+      width: 100%; background: var(--bg);
+      border: 1px solid var(--line); border-radius: 9px;
+      color: var(--txt); padding: 12px; font-size: 16px; font-family: inherit;
+    }
+    input:focus { outline: none; border-color: var(--accent); }
+    button {
+      width: 100%; margin-top: 22px; padding: 13px;
+      background: var(--accent); border: 0; border-radius: 9px;
+      color: #fff; font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer;
+    }
+    .error { margin-top: 14px; color: #e57373; font-size: 13px; min-height: 18px; }
+  </style>
+</head>
+<body>
+  <form id="form">
+    <div class="marca">PT</div>
+    <h1>Parte de Trabajo</h1>
+    <p class="sub">Ingresá con el PIN del taller o de la oficina.</p>
+
+    <label for="nombre">Tu nombre</label>
+    <input id="nombre" placeholder="Para firmar las actualizaciones" autocomplete="name" required>
+
+    <label for="pin">PIN</label>
+    <input id="pin" type="password" inputmode="numeric" autocomplete="current-password" required>
+
+    <button type="submit">Entrar</button>
+    <div class="error" id="error"></div>
+  </form>
+
+  <script>
+    const volver = new URLSearchParams(location.search).get('volver') || '/index.html';
+    const nombreGuardado = localStorage.getItem('ultimoOperario');
+    if (nombreGuardado) document.getElementById('nombre').value = nombreGuardado;
+
+    document.getElementById('form').addEventListener('submit', async ev => {
+      ev.preventDefault();
+      const nombre = document.getElementById('nombre').value.trim();
+      const pin = document.getElementById('pin').value;
+      const error = document.getElementById('error');
+      error.textContent = '';
+      try {
+        const r = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ nombre, pin }),
+        });
+        if (!r.ok) { error.textContent = (await r.json()).error || 'No se pudo ingresar'; return; }
+        localStorage.setItem('ultimoOperario', nombre);
+        location.href = volver;
+      } catch (e) {
+        error.textContent = 'No hay conexión con el servidor.';
+      }
+    });
+  </script>
+</body>
+</html>
