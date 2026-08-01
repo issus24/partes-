@@ -4,6 +4,27 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Parte de Trabajo — Taller</title>
+
+  <!-- En celulares se abre la vista móvil. La elección queda recordada:
+       el enlace "🖥 Escritorio" de la app móvil trae acá y se respeta. -->
+  <script>
+    (function () {
+      var forzada = new URLSearchParams(location.search).get('vista');
+      if (forzada) {
+        localStorage.setItem('vistaPreferida', forzada);
+        history.replaceState(null, '', location.pathname);
+      }
+      var pref = localStorage.getItem('vistaPreferida');
+      if (pref === 'escritorio') return;
+
+      var angosto = Math.min(screen.width || 9999, window.innerWidth || 9999) < 820;
+      var tactil = window.matchMedia('(pointer: coarse)').matches;
+      if (pref === 'movil' || angosto || (tactil && window.innerWidth < 1100)) {
+        location.replace('movil.html');
+      }
+    })();
+  </script>
+
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -21,7 +42,7 @@
       <span id="conexion" class="conexion"></span>
       <button id="btnAddVehiculo" class="btn btn-primary">+ Vehículo</button>
       <button id="btnHoy" class="btn">Ir a hoy</button>
-      <a class="btn" href="movil.html" title="Vista para celular">📱 Móvil</a>
+      <a class="btn" href="movil.html?vista=movil" title="Vista para celular">📱 Móvil</a>
       <button id="btnMenu" class="btn btn-icon" title="Más opciones">⋯</button>
     </div>
   </header>
