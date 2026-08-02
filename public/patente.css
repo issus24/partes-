@@ -33,9 +33,6 @@
   padding: .28em .5em .24em;
 }
 
-.pat-mercosur .pat-banda { background: #0a2c8c; color: #fff; }
-.pat-vieja    .pat-banda { background: #d7e5f8; color: #0a2c8c; border-bottom: .04em solid #9db4d6; }
-
 .pat-num {
   font-family: "Arial Narrow", "Segoe UI Semibold", Consolas, monospace;
   font-size: 1em;
@@ -45,6 +42,27 @@
   color: #0d0d0d;
   text-align: center;
   padding: .16em .34em .2em;
+}
+
+/* Mercosur: banda azul con letras blancas, cuerpo claro y letras negras. */
+.pat-mercosur .pat-banda { background: #0a2c8c; color: #fff; }
+
+/* Anterior: marco blanco, "ARGENTINA" en celeste y cuerpo negro con
+   letras blancas. */
+.pat-vieja .pat-banda {
+  background: transparent;
+  color: #2ba3e3;
+  font-size: .38em;
+  font-weight: 800;
+  letter-spacing: .12em;
+  padding: .3em .5em .22em;
+}
+.pat-vieja .pat-num {
+  background: #101010;
+  color: #f4f4f2;
+  margin: 0 .1em .1em;
+  border-radius: .08em;
+  padding: .2em .34em .24em;
 }
 
 /* Formato no reconocido: chapa lisa, sin banda de país. */
