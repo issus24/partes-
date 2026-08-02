@@ -21,6 +21,11 @@ const $ = sel => document.querySelector(sel);
 function vehiculosFiltrados() {
   const q = vista.buscar.trim();
   return datos.vehiculos.filter(v => {
+    // Terminada la reparación, la unidad figura hasta el día en que se
+    // cerró —ahí queda el sello— y desaparece del parte a partir del
+    // día siguiente. Hacia atrás se sigue viendo su historia.
+    if (v.finalizado && vista.fecha > v.finalizado) return false;
+
     if (!vista.estadosVisibles.has(v.estado)) return false;
     if (vista.ocultarTerminados && v.estado === 'operativo') return false;
     if (!q) return true;
