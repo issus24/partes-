@@ -59,7 +59,7 @@ function render() {
     tr.innerHTML = `
       <td class="c-pat">
         <button type="button" class="pat" data-editar="${v.id}" title="Editar vehículo">
-          ${escapar(formatearPatente(v.patente))}
+          ${patenteHTML(v.patente)}
         </button>
         ${abiertos ? `<span class="veh-pedidos" title="${abiertos} pedido(s) de repuestos sin cerrar">⛭ ${abiertos}</span>` : ''}
       </td>

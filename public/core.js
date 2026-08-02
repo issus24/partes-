@@ -417,14 +417,35 @@ function textoBuscable(v) {
 /* Se guardan sin separadores; el formato es cosa de la pantalla. */
 const normalizarPatente = p => String(p || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
-/* ABC123  → "ABC 123"      (6 caracteres, formato viejo)
+const RE_VIEJA = /^[A-Z]{3}[0-9]{3}$/;        // ABC 123
+const RE_MERCOSUR = /^[A-Z]{2}[0-9]{3}[A-Z]{2}$/;  // AB 123 CD
+
+/* ABC123  → "ABC 123"      (6 caracteres, formato anterior)
    AB123CD → "AB 123 CD"    (7 caracteres, Mercosur)
    Cualquier otra cosa se muestra tal cual se cargó. */
 function formatearPatente(p) {
   const s = normalizarPatente(p);
-  if (/^[A-Z]{3}[0-9]{3}$/.test(s)) return `${s.slice(0, 3)} ${s.slice(3)}`;
-  if (/^[A-Z]{2}[0-9]{3}[A-Z]{2}$/.test(s)) return `${s.slice(0, 2)} ${s.slice(2, 5)} ${s.slice(5)}`;
+  if (RE_VIEJA.test(s)) return `${s.slice(0, 3)} ${s.slice(3)}`;
+  if (RE_MERCOSUR.test(s)) return `${s.slice(0, 2)} ${s.slice(2, 5)} ${s.slice(5)}`;
   return s;
+}
+
+function tipoPatente(p) {
+  const s = normalizarPatente(p);
+  if (RE_MERCOSUR.test(s)) return 'mercosur';
+  if (RE_VIEJA.test(s)) return 'vieja';
+  return 'otra';
+}
+
+/* Chapa dibujada. El tamaño lo define el font-size del contenedor. */
+function patenteHTML(p) {
+  const tipo = tipoPatente(p);
+  const banda = tipo === 'mercosur' ? 'REPÚBLICA ARGENTINA'
+              : tipo === 'vieja' ? 'ARGENTINA'
+              : '';
+  return `<span class="patente pat-${tipo}">` +
+    (banda ? `<span class="pat-banda">${banda}</span>` : '') +
+    `<span class="pat-num">${escapar(formatearPatente(p))}</span></span>`;
 }
 
 function escapar(s) {

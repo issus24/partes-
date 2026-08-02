@@ -1,0 +1,50 @@
+/* ============================================================
+   Chapa de patente — compartida por escritorio y móvil.
+
+   Dos diseños según el formato:
+   · Mercosur (AB 123 CD) — banda azul superior con letras blancas.
+   · Anterior (ABC 123)   — banda celeste clara con letras azules.
+
+   Todo se dimensiona en "em", así que para agrandar o achicar una
+   chapa alcanza con cambiarle el font-size al contenedor .patente.
+   ============================================================ */
+
+.patente {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  font-size: 16px;                 /* base; cada pantalla la ajusta */
+  line-height: 1;
+  background: #f2f2ef;
+  border: .13em solid #0b0b0b;
+  border-radius: .3em;
+  overflow: hidden;
+  box-shadow: 0 .06em .2em rgba(0, 0, 0, .45);
+  white-space: nowrap;
+}
+
+.pat-banda {
+  font-family: "Segoe UI", system-ui, sans-serif;
+  font-size: .34em;
+  font-weight: 700;
+  letter-spacing: .09em;
+  text-align: center;
+  padding: .28em .5em .24em;
+}
+
+.pat-mercosur .pat-banda { background: #0a2c8c; color: #fff; }
+.pat-vieja    .pat-banda { background: #d7e5f8; color: #0a2c8c; border-bottom: .04em solid #9db4d6; }
+
+.pat-num {
+  font-family: "Arial Narrow", "Segoe UI Semibold", Consolas, monospace;
+  font-size: 1em;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-indent: .1em;               /* compensa el espaciado del último caracter */
+  color: #0d0d0d;
+  text-align: center;
+  padding: .16em .34em .2em;
+}
+
+/* Formato no reconocido: chapa lisa, sin banda de país. */
+.pat-otra .pat-num { font-size: .8em; letter-spacing: .05em; padding: .3em .4em; }

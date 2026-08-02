@@ -42,7 +42,7 @@ function renderLista() {
     li.dataset.id = v.id;
     li.innerHTML = `
       <div class="m-item-main">
-        <div class="m-item-pat">${escapar(formatearPatente(v.patente))}</div>
+        <div class="m-item-pat">${patenteHTML(v.patente)}</div>
         <div class="m-item-est">${escapar(est.label)}</div>
         <div class="m-item-meta">${escapar(meta)}</div>
       </div>
@@ -88,7 +88,7 @@ function renderDetalle() {
   if (!v) return volverALista();
 
   const dias = v.ingreso ? diffDias(v.ingreso, hoyISO()) : null;
-  $('#dPatente').textContent = formatearPatente(v.patente);
+  $('#dPatente').innerHTML = patenteHTML(v.patente);
   $('#dSub').textContent = dias === null ? '' : `${dias} día${dias === 1 ? '' : 's'} en taller`;
 
   // --- Estado (tocar para cambiar) ---

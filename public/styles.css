@@ -227,7 +227,7 @@ body {
 }
 
 /* Anchos: las novedades se quedan con todo el resto de la pantalla. */
-.c-pat  { width: 190px; }
+.c-pat  { width: 210px; }
 .c-prob { width: 26%; }
 .c-nov  { width: auto; }
 .c-est  { width: 210px; }
@@ -262,18 +262,16 @@ tr.fila td.c-pat { border-left: 4px solid var(--est); }
 
 /* Patente */
 .pat {
+  display: block;
   background: none;
   border: 0;
   padding: 0;
-  color: var(--txt);
-  font-family: "Consolas", monospace;
-  font-size: 19px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
   cursor: pointer;
   text-align: left;
 }
-.pat:hover { color: var(--accent); text-decoration: underline; }
+.pat .patente { font-size: 19px; transition: transform .12s, box-shadow .12s; }
+.pat:hover .patente { transform: translateY(-1px); box-shadow: 0 .12em .3em rgba(0,0,0,.6); }
+.pat:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
 
 .veh-pedidos {
   display: inline-block;
@@ -465,4 +463,6 @@ tr.fila:hover .btn-add-upd { opacity: 1; }
   .tabla-wrap { overflow: visible; }
   .parte th, .parte td, tr.fila td { border-color: #999 !important; background: #fff !important; color: #000 !important; }
   .sel-estado { color: #000 !important; }
+  /* Las chapas conservan sus colores al imprimir. */
+  .patente { box-shadow: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
