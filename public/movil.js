@@ -42,7 +42,7 @@ function renderLista() {
     li.dataset.id = v.id;
     li.innerHTML = `
       <div class="m-item-main">
-        <div class="m-item-pat">${escapar(v.patente)}</div>
+        <div class="m-item-pat">${escapar(formatearPatente(v.patente))}</div>
         <div class="m-item-est">${escapar(est.label)}</div>
         <div class="m-item-meta">${escapar(meta)}</div>
       </div>
@@ -88,7 +88,7 @@ function renderDetalle() {
   if (!v) return volverALista();
 
   const dias = v.ingreso ? diffDias(v.ingreso, hoyISO()) : null;
-  $('#dPatente').textContent = v.patente;
+  $('#dPatente').textContent = formatearPatente(v.patente);
   $('#dSub').textContent = dias === null ? '' : `${dias} día${dias === 1 ? '' : 's'} en taller`;
 
   // --- Estado (tocar para cambiar) ---
@@ -180,7 +180,7 @@ function abrirHojaUpd(fecha = null, idx = null) {
   updEditando = { fecha: f, idx };
 
   $('#hUpdTitulo').textContent = idx === null ? 'Nueva actualización' : 'Editar actualización';
-  $('#hUpdMeta').textContent = v.patente;
+  $('#hUpdMeta').textContent = formatearPatente(v.patente);
   $('#hSector').value = u.sector || localStorage.getItem('ultimoSector') || '';
   $('#hTexto').value = u.texto || '';
   $('#hOperario').value = u.operario || localStorage.getItem('ultimoOperario') || '';
@@ -288,8 +288,8 @@ function abrirHojaPedido(idx = null) {
   $('#hPedTitulo').textContent = idx === null ? 'Nuevo pedido' : 'Editar pedido';
   // El vehículo y el solicitante salen del contexto: no se preguntan.
   $('#hPedMeta').textContent = idx === null
-    ? v.patente
-    : `${v.patente} · ${pedidoEstadoPorId(p.estado).label} · solicitado ${fechaRelativa(p.fecha)}`;
+    ? formatearPatente(v.patente)
+    : `${formatearPatente(v.patente)} · ${pedidoEstadoPorId(p.estado).label} · solicitado ${fechaRelativa(p.fecha)}`;
   $('#pDescripcion').value = p.descripcion || '';
   $('#pCantidad').value = p.cantidad || 1;
 

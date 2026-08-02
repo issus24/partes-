@@ -412,6 +412,21 @@ function textoBuscable(v) {
   ].join(' ');
 }
 
+/* ---------- Patentes ---------- */
+
+/* Se guardan sin separadores; el formato es cosa de la pantalla. */
+const normalizarPatente = p => String(p || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+/* ABC123  → "ABC 123"      (6 caracteres, formato viejo)
+   AB123CD → "AB 123 CD"    (7 caracteres, Mercosur)
+   Cualquier otra cosa se muestra tal cual se cargó. */
+function formatearPatente(p) {
+  const s = normalizarPatente(p);
+  if (/^[A-Z]{3}[0-9]{3}$/.test(s)) return `${s.slice(0, 3)} ${s.slice(3)}`;
+  if (/^[A-Z]{2}[0-9]{3}[A-Z]{2}$/.test(s)) return `${s.slice(0, 2)} ${s.slice(2, 5)} ${s.slice(5)}`;
+  return s;
+}
+
 function escapar(s) {
   return String(s ?? '').replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

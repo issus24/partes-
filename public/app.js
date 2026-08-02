@@ -1,19 +1,11 @@
 /* ============================================================
-   Parte de Trabajo — vista de escritorio (grilla vehículo × día)
-   Requiere core.js cargado antes que este archivo.
+   Parte de Trabajo — vista de escritorio.
+   Una pantalla por día: patente, problemas, novedades del día,
+   estado y fecha de ingreso. Requiere core.js cargado antes.
    ============================================================ */
 
-/* El rango va desde el día más viejo con datos (o 14 días atrás) hasta 3 semanas
-   adelante. La grilla se dibuja entera y el scroll arranca posicionado en HOY:
-   para ver días anteriores se desplaza a la izquierda, y al llegar al borde se
-   cargan más días viejos automáticamente. */
-const DIAS_PASADO_MIN = 14;
-const DIAS_FUTURO = 21;
-const BLOQUE_CARGA = 21;
-
 const vista = {
-  desde: null,
-  hasta: null,
+  fecha: hoyISO(),               // día que se está viendo
   buscar: '',
   estadosVisibles: new Set(ESTADOS.map(e => e.id)),
   ocultarTerminados: false,
@@ -26,25 +18,6 @@ const $ = sel => document.querySelector(sel);
 
 /* ---------- Render ---------- */
 
-/* Extiende el rango hacia atrás si hay ingresos o actualizaciones más viejas,
-   así ningún dato cargado queda fuera de la grilla. */
-function ajustarRango() {
-  const hoy = hoyISO();
-  let min = vista.desde || sumarDias(hoy, -DIAS_PASADO_MIN);
-  for (const v of datos.vehiculos) {
-    if (v.ingreso && v.ingreso < min) min = v.ingreso;
-    for (const f of Object.keys(v.updates || {})) if (f < min) min = f;
-  }
-  vista.desde = min;
-  const finMin = sumarDias(hoy, DIAS_FUTURO);
-  if (!vista.hasta || vista.hasta < finMin) vista.hasta = finMin;
-}
-
-function diasVisibles() {
-  const n = diffDias(vista.desde, vista.hasta) + 1;
-  return Array.from({ length: n }, (_, i) => sumarDias(vista.desde, i));
-}
-
 function vehiculosFiltrados() {
   const q = vista.buscar.trim();
   return datos.vehiculos.filter(v => {
@@ -56,94 +29,107 @@ function vehiculosFiltrados() {
 }
 
 function render() {
-  ajustarRango();
-  const scrollPrevio = wrap.scrollLeft;
-  const dias = diasVisibles();
+  const f = vista.fecha;
   const hoy = hoyISO();
   const lista = vehiculosFiltrados();
 
-  // --- Encabezado ---
-  const thead = $('#thead');
-  thead.innerHTML = '';
-  const trh = document.createElement('tr');
-
-  const thFija = document.createElement('th');
-  thFija.className = 'col-fija';
-  thFija.innerHTML = '<span class="th-titulo">Vehículo</span>';
-  trh.appendChild(thFija);
-
-  for (const f of dias) {
-    const th = document.createElement('th');
-    th.className = 'dia';
-    if (f === hoy) th.classList.add('hoy');
-    else if (esFinde(f)) th.classList.add('finde');
-    th.innerHTML = `<span class="dia-num">${fechaCorta(f)}</span>
-                    <span class="dia-nom">${f === hoy ? 'hoy' : NOMBRE_DIA[isoADate(f).getDay()]}</span>`;
-    trh.appendChild(th);
-  }
-  thead.appendChild(trh);
+  // --- Encabezado del día ---
+  $('#diaTitulo').textContent = fechaLargaCompleta(f);
+  $('#diaRel').textContent = fechaRelativa(f);
+  $('#diaRel').className = 'dia-rel' + (f === hoy ? ' es-hoy' : '');
+  $('#diaFecha').value = f;
+  $('#novDia').textContent = `— ${fechaCorta(f)}`;
+  document.body.classList.toggle('viendo-hoy', f === hoy);
 
   // --- Filas ---
   const tbody = $('#tbody');
   tbody.innerHTML = '';
 
   for (const v of lista) {
+    const est = estadoPorId(v.estado);
+    const dias = v.ingreso ? diffDias(v.ingreso, hoy) : null;
+    const updates = v.updates?.[f] || [];
+    const abiertos = pedidosAbiertos(v).length;
+
     const tr = document.createElement('tr');
+    tr.className = 'fila';
+    tr.style.setProperty('--est', est.color);
     tr.dataset.id = v.id;
 
-    const est = estadoPorId(v.estado);
-    const td = document.createElement('td');
-    td.className = 'col-fija';
-    const diasEnTaller = v.ingreso ? diffDias(v.ingreso, hoy) : null;
-    const abiertos = pedidosAbiertos(v).length;
-    td.innerHTML = `
-      <div class="veh" data-editar-vehiculo="${v.id}">
-        <span class="veh-patente">
-          <span class="estado-dot" style="background:${est.color}" title="${est.label}"></span>
-          ${escapar(v.patente)}
-          ${abiertos ? `<span class="veh-pedidos" title="${abiertos} pedido(s) de repuestos sin cerrar">⛭ ${abiertos}</span>` : ''}
-        </span>
-        ${(v.problemas || []).map(p => {
-          const c = categoriaPorId(p.categoria);
-          return `<span class="prob" style="--cat:${c.color}" title="${escapar(c.label)}: ${escapar(p.texto)}">
-                    <span class="prob-etiqueta">${escapar(c.label)}</span>
-                    <span class="prob-txt">${escapar(p.texto)}</span>
-                  </span>`;
-        }).join('')}
-        ${diasEnTaller !== null ? `<span class="veh-dias">${diasEnTaller} día${diasEnTaller === 1 ? '' : 's'} en taller</span>` : ''}
-      </div>`;
-    tr.appendChild(td);
+    tr.innerHTML = `
+      <td class="c-pat">
+        <button type="button" class="pat" data-editar="${v.id}" title="Editar vehículo">
+          ${escapar(formatearPatente(v.patente))}
+        </button>
+        ${abiertos ? `<span class="veh-pedidos" title="${abiertos} pedido(s) de repuestos sin cerrar">⛭ ${abiertos}</span>` : ''}
+      </td>
 
-    for (const f of dias) {
-      const celda = document.createElement('td');
-      celda.className = 'celda';
-      if (f === hoy) celda.classList.add('hoy');
-      else if (esFinde(f)) celda.classList.add('finde');
-      celda.dataset.vehiculo = v.id;
-      celda.dataset.fecha = f;
+      <td class="c-prob">
+        ${(v.problemas || []).length
+          ? (v.problemas).map(p => {
+              const c = categoriaPorId(p.categoria);
+              return `<span class="prob" style="--cat:${c.color}">
+                        <span class="prob-etiqueta">${escapar(c.label)}</span>
+                        <span class="prob-txt">${escapar(p.texto)}</span>
+                      </span>`;
+            }).join('')
+          : '<span class="nada">Sin problemas cargados</span>'}
+      </td>
 
-      const updates = v.updates?.[f] || [];
-      const bloques = updates.map((u, i) => `
-          <div class="upd" data-idx="${i}" style="border-left-color:${colorSector(u.sector)}">
-            ${u.sector ? `<span class="upd-sector">${escapar(u.sector)}</span>` : ''}
-            <span class="upd-texto">${escapar(u.texto || '')}</span>
-            ${u.operario ? `<span class="upd-pie">${escapar(u.operario)}</span>` : ''}
-          </div>`).join('');
+      <td class="c-nov">
+        <div class="novedades">
+          ${updates.map((u, i) => `
+            <div class="upd" data-idx="${i}" style="border-left-color:${colorSector(u.sector)}">
+              ${u.sector ? `<span class="upd-sector">${escapar(u.sector)}</span>` : ''}
+              <span class="upd-texto">${escapar(u.texto || '')}</span>
+              ${u.operario ? `<span class="upd-pie">${escapar(u.operario)}</span>` : ''}
+            </div>`).join('')}
+          <button type="button" class="btn-add-upd" data-nueva title="Agregar novedad de este día">
+            + Novedad
+          </button>
+        </div>
+      </td>
 
-      celda.innerHTML = `<div class="celda-inner">${bloques}
-        <button type="button" class="btn-add-upd" data-nueva title="Agregar actualización">+</button>
-      </div>`;
-      if (!updates.length) celda.classList.add('vacia');
-      tr.appendChild(celda);
-    }
+      <td class="c-est">
+        <select class="sel-estado" data-estado="${v.id}" style="--est:${est.color}">
+          ${ESTADOS.map(e => `<option value="${e.id}"${e.id === v.estado ? ' selected' : ''}>${e.label}</option>`).join('')}
+        </select>
+      </td>
+
+      <td class="c-ing">
+        ${v.ingreso ? `<span class="ing-fecha">${fechaCorta(v.ingreso)}/${v.ingreso.slice(2, 4)}</span>` : '<span class="nada">—</span>'}
+        ${dias !== null ? `<span class="ing-dias ${dias >= 15 ? 'alerta' : ''}">${dias} día${dias === 1 ? '' : 's'}</span>` : ''}
+      </td>`;
+
     tbody.appendChild(tr);
   }
 
   // --- Auxiliares ---
   $('#contador').textContent = `${lista.length} de ${datos.vehiculos.length} vehículo${datos.vehiculos.length === 1 ? '' : 's'}`;
   $('#vacio').classList.toggle('hidden', datos.vehiculos.length > 0);
-  if (wrap.scrollLeft !== scrollPrevio) wrap.scrollLeft = scrollPrevio;
 }
+
+/* "lunes 2 de agosto de 2026" */
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+const DIAS_LARGO = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'];
+
+function fechaLargaCompleta(iso) {
+  const d = isoADate(iso);
+  return `${DIAS_LARGO[d.getDay()]} ${d.getDate()} de ${MESES[d.getMonth()]}`;
+}
+
+/* ---------- Navegación por día ---------- */
+
+function irADia(iso) {
+  vista.fecha = iso;
+  render();
+}
+
+$('#btnDiaPrev').onclick = () => irADia(sumarDias(vista.fecha, -1));
+$('#btnDiaNext').onclick = () => irADia(sumarDias(vista.fecha, 1));
+$('#btnHoy').onclick = () => irADia(hoyISO());
+$('#diaFecha').onchange = e => { if (e.target.value) irADia(e.target.value); };
 
 /* ---------- Chips de estado ---------- */
 
@@ -289,7 +275,7 @@ function abrirVehiculo(id = null) {
   vehiculoEditando = id;
   const v = id ? vehiculoPorId(id) : null;
   $('#dlgVehiculoTitulo').textContent = v ? 'Editar vehículo' : 'Nuevo vehículo';
-  $('#vPatente').value = v?.patente || '';
+  $('#vPatente').value = v ? formatearPatente(v.patente) : '';
   $('#vIngreso').value = v?.ingreso || hoyISO();
   $('#vEstado').value = v?.estado || ESTADO_DEFECTO;
 
@@ -305,7 +291,7 @@ function abrirVehiculo(id = null) {
 }
 
 $('#formVehiculo').addEventListener('submit', () => {
-  const patente = $('#vPatente').value.trim().toUpperCase();
+  const patente = normalizarPatente($('#vPatente').value);
   if (!patente) return;
   const campos = {
     patente,
@@ -314,11 +300,12 @@ $('#formVehiculo').addEventListener('submit', () => {
     pedidos: leerPedidos(),
     estado: $('#vEstado').value,
   };
+
   let v;
   if (vehiculoEditando) {
     v = Object.assign(vehiculoPorId(vehiculoEditando), campos);
   } else {
-    v = { id: nuevoId(), ...campos, updates: {}, pedidos: campos.pedidos || [] };
+    v = { id: nuevoId(), ...campos, updates: {} };
     datos.vehiculos.push(v);
   }
   guardarVehiculo(v);
@@ -328,15 +315,15 @@ $('#formVehiculo').addEventListener('submit', () => {
 $('#btnBorrarVehiculo').addEventListener('click', () => {
   const v = vehiculoPorId(vehiculoEditando);
   if (!v) return;
-  if (!confirm(`¿Eliminar ${v.patente} y todas sus actualizaciones?`)) return;
+  if (!confirm(`¿Eliminar ${formatearPatente(v.patente)} y todas sus novedades?`)) return;
   borrarVehiculoRemoto(vehiculoEditando);
   render();
   $('#dlgVehiculo').close();
 });
 
-/* ---------- Actualizaciones ---------- */
+/* ---------- Novedades ---------- */
 
-/* idx = null → nueva actualización; idx = número → editar la existente. */
+/* idx = null → nueva novedad; idx = número → editar la existente. */
 function abrirUpdate(vehiculoId, fecha, idx = null) {
   const v = vehiculoPorId(vehiculoId);
   if (!v) return;
@@ -344,8 +331,8 @@ function abrirUpdate(vehiculoId, fecha, idx = null) {
   const u = idx === null ? {} : (v.updates?.[fecha]?.[idx] || {});
   const cantidad = (v.updates?.[fecha] || []).length;
 
-  $('#updTitulo').textContent = idx === null ? 'Nueva actualización' : 'Editar actualización';
-  $('#updMeta').textContent = `${v.patente} — ${fechaLarga(fecha)}` +
+  $('#updTitulo').textContent = idx === null ? 'Nueva novedad' : 'Editar novedad';
+  $('#updMeta').textContent = `${formatearPatente(v.patente)} — ${fechaLarga(fecha)}` +
     (idx === null && cantidad ? ` · ya hay ${cantidad} en este día` : '');
   $('#uSector').value = u.sector || '';
   $('#uTexto').value = u.texto || '';
@@ -391,7 +378,7 @@ $('#btnBorrarUpdate').addEventListener('click', () => {
   const v = vehiculoPorId(vehiculoId);
   const lista = v?.updates?.[fecha];
   if (!lista) return;
-  if (!confirm('¿Eliminar esta actualización?')) return;
+  if (!confirm('¿Eliminar esta novedad?')) return;
   lista.splice(idx, 1);
   if (!lista.length) delete v.updates[fecha];
   guardarVehiculo(v);
@@ -399,57 +386,30 @@ $('#btnBorrarUpdate').addEventListener('click', () => {
   $('#dlgUpdate').close();
 });
 
-/* ---------- Interacción tabla ---------- */
+/* ---------- Interacción de la tabla ---------- */
 
 $('#tbody').addEventListener('click', ev => {
-  const veh = ev.target.closest('[data-editar-vehiculo]');
-  if (veh) { abrirVehiculo(veh.dataset.editarVehiculo); return; }
+  const editar = ev.target.closest('[data-editar]');
+  if (editar) { abrirVehiculo(editar.dataset.editar); return; }
 
-  const celda = ev.target.closest('td.celda');
-  if (!celda) return;
+  const fila = ev.target.closest('tr.fila');
+  if (!fila) return;
 
   const bloque = ev.target.closest('.upd');
-  const nueva = ev.target.closest('[data-nueva]');
-  const idx = bloque && !nueva ? Number(bloque.dataset.idx) : null;
-  abrirUpdate(celda.dataset.vehiculo, celda.dataset.fecha, idx);
+  if (bloque) return abrirUpdate(fila.dataset.id, vista.fecha, Number(bloque.dataset.idx));
+
+  if (ev.target.closest('[data-nueva]')) abrirUpdate(fila.dataset.id, vista.fecha, null);
 });
 
-/* ---------- Navegación de días (por scroll) ---------- */
-
-const wrap = $('.tabla-wrap');
-
-/* Deja la columna de HOY pegada al borde derecho de la columna fija. */
-function irAHoy(suave = true) {
-  const th = $('thead th.dia.hoy');
-  const fija = $('thead th.col-fija');
-  if (!th || !fija) return;
-  const delta = th.getBoundingClientRect().left - fija.getBoundingClientRect().right;
-  wrap.scrollTo({ left: wrap.scrollLeft + delta, behavior: suave ? 'smooth' : 'auto' });
-}
-
-$('#btnHoy').onclick = () => irAHoy();
-
-/* Al acercarse a cualquiera de los dos bordes, se agregan más días sin perder
-   la posición visual del scroll. */
-let ampliando = false;
-
-wrap.addEventListener('scroll', () => {
-  if (ampliando) return;
-  const margen = 400;
-
-  if (wrap.scrollLeft < margen) {
-    ampliando = true;
-    const anchoAntes = wrap.scrollWidth;
-    vista.desde = sumarDias(vista.desde, -BLOQUE_CARGA);
-    render();
-    wrap.scrollLeft += wrap.scrollWidth - anchoAntes;
-    ampliando = false;
-  } else if (wrap.scrollLeft + wrap.clientWidth > wrap.scrollWidth - margen) {
-    ampliando = true;
-    vista.hasta = sumarDias(vista.hasta, BLOQUE_CARGA);
-    render();
-    ampliando = false;
-  }
+/* Cambiar el estado desde la tabla repinta la fila entera. */
+$('#tbody').addEventListener('change', ev => {
+  const sel = ev.target.closest('[data-estado]');
+  if (!sel) return;
+  const v = vehiculoPorId(sel.dataset.estado);
+  if (!v) return;
+  v.estado = sel.value;
+  guardarVehiculo(v);
+  render();
 });
 
 /* ---------- Filtros ---------- */
@@ -469,7 +429,7 @@ $('#menuPanel').addEventListener('click', e => {
   if (acc === 'import') $('#fileImport').click();
   if (acc === 'print') window.print();
   if (acc === 'reset') {
-    if (confirm('Esto borra TODOS los vehículos y actualizaciones. ¿Continuar?')) {
+    if (confirm('Esto borra TODOS los vehículos y novedades. ¿Continuar?')) {
       reemplazarTodo([]);
       render();
     }
@@ -509,15 +469,15 @@ document.querySelector('[data-add-vehiculo]').onclick = () => abrirVehiculo();
 document.addEventListener('keydown', e => {
   if (document.querySelector('dialog[open]')) return;
   if (e.target.matches('input, textarea, select')) return;
-  if (e.key === 'ArrowLeft') wrap.scrollBy({ left: -wrap.clientWidth * 0.6, behavior: 'smooth' });
-  if (e.key === 'ArrowRight') wrap.scrollBy({ left: wrap.clientWidth * 0.6, behavior: 'smooth' });
-  if (e.key === 'Home') irAHoy();
+  if (e.key === 'ArrowLeft') $('#btnDiaPrev').click();
+  if (e.key === 'ArrowRight') $('#btnDiaNext').click();
+  if (e.key === 'Home') $('#btnHoy').click();
   if (e.key.toLowerCase() === 'n') { e.preventDefault(); abrirVehiculo(); }
 });
 
 /* ---------- Estado de la conexión ---------- */
 
-function mostrarConexion(ok, usuario) {
+function mostrarConexion(ok, usr) {
   const el = $('#conexion');
   const pend = cambiosPendientes();
   if (!HAY_SERVIDOR) {
@@ -528,7 +488,7 @@ function mostrarConexion(ok, usuario) {
   }
   el.className = 'conexion ' + (ok ? 'ok' : 'off');
   el.textContent = ok
-    ? (usuario ? `${usuario.nombre} · en línea` : 'En línea')
+    ? (usr ? `${usr.nombre} · en línea` : 'En línea')
     : `Sin conexión${pend ? ` · ${pend} sin enviar` : ''}`;
   el.title = ok ? 'Sincronizado con el servidor' : 'Los cambios se guardan y se envían al recuperar señal.';
 }
@@ -539,6 +499,5 @@ llenarSelectEstados($('#vEstado'));
 $('#listaSectores').innerHTML = SECTORES.map(s => `<option value="${s}">`).join('');
 renderChips();
 render();
-irAHoy(false);
 iniciarSync(() => { renderChips(); render(); }, mostrarConexion);
 mostrarConexion(false);

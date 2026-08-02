@@ -40,7 +40,6 @@
     <div class="topbar-actions">
       <span id="conexion" class="conexion"></span>
       <button id="btnAddVehiculo" class="btn btn-primary">+ Vehículo</button>
-      <button id="btnHoy" class="btn">Ir a hoy</button>
       <a class="btn" href="movil.html?vista=movil" title="Vista para celular">📱 Móvil</a>
       <button id="btnMenu" class="btn btn-icon" title="Más opciones">⋯</button>
     </div>
@@ -53,6 +52,23 @@
     <button data-action="reset" class="danger">Borrar todo</button>
   </div>
 
+  <!-- Navegación por día -->
+  <section class="dia-nav">
+    <button id="btnDiaPrev" class="btn btn-nav" title="Día anterior (←)">‹ Anterior</button>
+
+    <div class="dia-actual">
+      <span id="diaTitulo">—</span>
+      <span id="diaRel" class="dia-rel"></span>
+    </div>
+
+    <button id="btnDiaNext" class="btn btn-nav" title="Día siguiente (→)">Siguiente ›</button>
+
+    <div class="dia-extra">
+      <input type="date" id="diaFecha" class="dia-input" title="Ir a una fecha">
+      <button id="btnHoy" class="btn">Hoy</button>
+    </div>
+  </section>
+
   <section class="filtros">
     <input id="buscar" type="search" placeholder="Buscar patente o problema…" autocomplete="off">
     <div class="chips" id="filtroEstados"></div>
@@ -64,8 +80,16 @@
   </section>
 
   <main class="tabla-wrap">
-    <table class="parte" id="tabla">
-      <thead id="thead"></thead>
+    <table class="parte">
+      <thead>
+        <tr>
+          <th class="c-pat">Patente</th>
+          <th class="c-prob">Problemas de ingreso</th>
+          <th class="c-nov">Novedades <span id="novDia" class="th-dia"></span></th>
+          <th class="c-est">Estado</th>
+          <th class="c-ing">Ingreso</th>
+        </tr>
+      </thead>
       <tbody id="tbody"></tbody>
     </table>
     <div id="vacio" class="vacio hidden">
@@ -79,7 +103,7 @@
     <form method="dialog" id="formVehiculo">
       <h2 id="dlgVehiculoTitulo">Nuevo vehículo</h2>
       <div class="campo">
-        <label for="vPatente">Patente *</label>
+        <label for="vPatente">Patente * <span class="hint">— ABC123 o AB123CD</span></label>
         <input id="vPatente" name="patente" required maxlength="12" placeholder="AB 123 CD" autocomplete="off">
       </div>
       <div class="campo">
@@ -109,10 +133,10 @@
     </form>
   </dialog>
 
-  <!-- Modal: actualización de una celda -->
+  <!-- Modal: novedad de una celda -->
   <dialog id="dlgUpdate" class="dlg">
     <form method="dialog" id="formUpdate">
-      <h2 id="updTitulo">Nueva actualización</h2>
+      <h2 id="updTitulo">Nueva novedad</h2>
       <p class="dlg-meta" id="updMeta"></p>
       <div class="campo">
         <label for="uSector">Sector que informa</label>
@@ -120,7 +144,7 @@
         <datalist id="listaSectores"></datalist>
       </div>
       <div class="campo">
-        <label for="uTexto">Actualización</label>
+        <label for="uTexto">Novedad</label>
         <textarea id="uTexto" rows="4" placeholder="Ej: Preparando cotización para repuestos requeridos."></textarea>
       </div>
       <div class="campo">
