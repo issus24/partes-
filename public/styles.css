@@ -567,7 +567,11 @@ tr.fila-cerrada td { height: 94px; }
 .spacer { flex: 1; }
 
 /* ---------- Planillas (repuestos y parte de trabajo) ---------- */
-.dlg-ancho { width: 940px; max-height: 88vh; display: flex; flex-direction: column; }
+/* Ojo: el display va sobre [open]. Si se declara suelto pisa la regla
+   del navegador que oculta los <dialog> cerrados, y quedan siempre
+   visibles tapando los clics del resto de la pantalla. */
+.dlg-ancho { width: 940px; max-height: 88vh; }
+.dlg-ancho[open] { display: flex; flex-direction: column; }
 
 .dlg-cab {
   display: flex;
