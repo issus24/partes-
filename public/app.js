@@ -53,7 +53,7 @@ function render() {
     const abiertos = pedidosAbiertos(v).length;
 
     const tr = document.createElement('tr');
-    tr.className = 'fila';
+    tr.className = 'fila' + (cerrado ? ' fila-cerrada' : '');
     tr.style.setProperty('--est', est.color);
     tr.dataset.id = v.id;
 
@@ -134,7 +134,7 @@ function selloHTML(v) {
    · Novedades   → la mitad del espacio que sobra (el resto queda libre,
                    absorbido por la columna vacía del final).
    El resto de las columnas tiene ancho fijo en el CSS. */
-const ANCHO_PAT = 210, ANCHO_EST = 210, ANCHO_ING = 150;
+const ANCHO_PAT = 210, ANCHO_EST = 210, ANCHO_ING = 175;
 
 function ajustarAnchos(lista) {
   const masLargo = lista.reduce((max, v) =>
