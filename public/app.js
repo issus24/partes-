@@ -55,7 +55,9 @@ function render() {
     const est = estadoPorId(e.estado);
     const dias = diasEnTaller(e);
     const cerrado = estaFinalizado(e);
-    const updates = e.updates?.[f] || [];
+    const vigentes = novedadesVigentes(e, f);
+    const updates = vigentes?.lista || [];
+    const updFecha = vigentes?.fecha || f;
     const abiertos = pedidosAbiertos(e).length;
 
     const tr = document.createElement('tr');
@@ -86,10 +88,12 @@ function render() {
       <td class="c-nov">
         <div class="novedades">
           ${updates.map((u, i) => `
-            <div class="upd" data-idx="${i}" style="border-left-color:${colorSector(u.sector)}">
+            <div class="upd${updFecha === f ? '' : ' upd-previa'}" data-idx="${i}" data-fecha="${updFecha}"
+                 style="border-left-color:${colorSector(u.sector)}">
               ${u.sector ? `<span class="upd-sector">${escapar(u.sector)}</span>` : ''}
               <span class="upd-texto">${escapar(u.texto || '')}</span>
               ${u.operario ? `<span class="upd-pie">${escapar(u.operario)}</span>` : ''}
+              ${updFecha === f ? '' : `<span class="upd-desde">sigue igual desde el ${fechaCorta(updFecha)}</span>`}
             </div>`).join('')}
           <button type="button" class="btn-add-upd" data-nueva title="Agregar novedad de este día">
             + Novedad
@@ -189,29 +193,6 @@ $('#btnDiaPrev').onclick = () => irADia(sumarDias(vista.fecha, -1));
 $('#btnDiaNext').onclick = () => irADia(sumarDias(vista.fecha, 1));
 $('#btnHoy').onclick = () => irADia(hoyISO());
 $('#diaFecha').onchange = e => { if (e.target.value) irADia(e.target.value); };
-
-/* Los domingos y feriados no se carga parte. La grilla igual lista las
-   unidades que están en el taller, pero la columna de novedades sale
-   vacía y la pantalla parece sin datos. Así que la primera vez que
-   llegan los datos, si hoy todavía nadie escribió una novedad, se abre
-   en el último día que sí tuvo. Después manda la navegación, y el botón
-   "Hoy" vuelve siempre al día de hoy para cargar lo del día. */
-let diaUbicado = false;
-
-function ubicarDiaInicial() {
-  if (diaUbicado || !datos.vehiculos.length) return;
-  diaUbicado = true;
-
-  const hoy = hoyISO();
-  const conNovedades = datos.vehiculos
-    .flatMap(v => (v.estadias || []).flatMap(e => Object.keys(e.updates || {})))
-    .filter(f => f < hoy);
-
-  if (!conNovedades.length) return;
-  if (datos.vehiculos.some(v => estadiaEnFecha(v, hoy)?.updates?.[hoy]?.length)) return;
-
-  vista.fecha = conNovedades.sort().pop();
-}
 
 /* ---------- Chips de estado ---------- */
 
@@ -836,9 +817,13 @@ $('#tbody').addEventListener('click', ev => {
   const fila = ev.target.closest('tr.fila');
   if (!fila) return;
 
+  /* Se edita la novedad en el día en que se escribió, no en el que se está
+     mirando: si viene arrastrada de un día anterior, tocarla corrige
+     aquella y no crea una copia con la fecha de hoy. */
   const bloque = ev.target.closest('.upd');
-  if (bloque) return abrirUpdate(fila.dataset.id, vista.fecha, Number(bloque.dataset.idx));
+  if (bloque) return abrirUpdate(fila.dataset.id, bloque.dataset.fecha, Number(bloque.dataset.idx));
 
+  // La novedad nueva sí es del día que se está mirando.
   if (ev.target.closest('[data-nueva]')) abrirUpdate(fila.dataset.id, vista.fecha, null);
 });
 
@@ -942,5 +927,5 @@ llenarSelectEstados($('#vEstado'));
 $('#listaSectores').innerHTML = SECTORES.map(s => `<option value="${s}">`).join('');
 renderChips();
 render();
-iniciarSync(() => { ubicarDiaInicial(); renderChips(); render(); }, mostrarConexion);
+iniciarSync(() => { renderChips(); render(); }, mostrarConexion);
 mostrarConexion(false);

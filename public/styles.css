@@ -373,6 +373,19 @@ tr.fila td.c-pat { border-left: 4px solid var(--est); }
 .upd-texto { display: block; font-size: 13px; line-height: 1.35; }
 .upd-pie { display: block; font-size: 10.5px; color: var(--txt-dim); margin-top: 2px; }
 
+/* Novedad que viene de un día anterior y sigue en pie. Se atenúa apenas,
+   lo justo para no confundirla con algo escrito hoy sin esconderla. */
+.upd-previa { background: rgba(0,0,0,.16); }
+.upd-previa .upd-texto { color: var(--txt-dim); }
+.upd-desde {
+  display: block;
+  font-size: 9.5px;
+  font-style: italic;
+  color: var(--txt-dim);
+  opacity: .8;
+  margin-top: 3px;
+}
+
 .btn-add-upd {
   align-self: flex-start;
   border: 1px dashed var(--line);

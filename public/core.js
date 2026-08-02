@@ -542,6 +542,21 @@ const fechasConUpdates = e => Object.keys(e?.updates || {}).sort().reverse();
 
 const ultimaFechaUpdate = e => fechasConUpdates(e)[0] || null;
 
+/* Las novedades que están en pie un día dado.
+
+   Una novedad no vale solo el día que se escribió: describe cómo viene la
+   unidad, y sigue valiendo hasta que alguien escribe otra o la unidad pasa
+   a operativa — igual que los problemas. Si el viernes se anotó "motor en
+   rectificadora", el sábado sigue siendo cierto aunque nadie lo repita, y
+   el domingo, que no se carga parte, también.
+
+   Devuelve las novedades del último día con texto que no pase de `iso`,
+   junto con su fecha, para que la pantalla pueda aclarar de cuándo son. */
+function novedadesVigentes(e, iso) {
+  const fecha = fechasConUpdates(e).find(f => f <= iso);
+  return fecha ? { fecha, lista: e.updates[fecha] } : null;
+}
+
 /* Texto sobre el que buscar un vehículo: incluye todas sus estadías. */
 function textoBuscable(v) {
   const partes = [v.patente, v.marca, v.modelo, v.chasis, v.motor];

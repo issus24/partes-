@@ -487,23 +487,36 @@ function sumarProblema(e, { texto, categoria }) {
 }
 
 /* La observación de cada fila entra como novedad del día en que el parte
-   la dice. Se repite mientras el parte la siga arrastrando, y está bien
-   que se repita: la grilla muestra un día por vez, y abrir el sábado
-   tiene que mostrar lo que el parte del sábado decía — no mandar a
-   buscarlo al día en que se escribió por primera vez.
+   la dice, pero solo cuando cambia respecto de la que ya estaba en pie.
+
+   El parte arrastra la misma observación días enteros: CQD623 repite "se
+   está reparando instalación eléctrica" del 28/7 al 1/8. Anotarla cinco
+   veces no agrega nada, porque novedadesVigentes() la mantiene a la vista
+   hasta que aparece otra. Se guarda el día que se dijo por primera vez y
+   el historial queda legible: cinco renglones iguales no cuentan lo mismo
+   que uno con su fecha.
+
+   Ojo con deduplicar de más: si el parte dice A, después B, y más tarde
+   vuelve a A, esa vuelta a A sí es una novedad — por eso se compara solo
+   contra la que está vigente y no contra todo lo ya visto.
 
    El operario va vacío a propósito. La columna Responsable de la planilla
    trae nombres, pero son de quien firmó el parte, no necesariamente de
    quien hizo el trabajo: ponerlos ahí sería atribuirle a alguien una
    reparación que capaz no tocó. Se carga a mano desde la app. */
 function sumarUpdates(e, dia) {
-  const delDia = new Set();
+  const textos = [];
   for (const u of dia.updates) {
     const texto = enMinuscula(u.texto);
-    if (!texto || delDia.has(texto)) continue;    // dos filas de la misma unidad con el mismo texto
-    delDia.add(texto);
-    (e.updates[dia.fecha] ||= []).push({ sector: 'taller', texto, operario: '' });
+    if (texto && !textos.includes(texto)) textos.push(texto);
   }
+  if (!textos.length) return;
+
+  const vigente = (e._vigente || []).join('|');
+  if (textos.join('|') === vigente) return;
+  e._vigente = textos;
+
+  e.updates[dia.fecha] = textos.map(texto => ({ sector: 'taller', texto, operario: '' }));
 }
 
 /* ------------------------------------------------------------------
@@ -578,6 +591,7 @@ function importar() {
     colgadas += cerrarLasColgadas(estadias, ultimoParte);
     for (const [i, e] of estadias.entries()) {
       e.id = `imp-${patente}-${i + 1}`;
+      delete e._vigente;
       if (!e.negligencia) delete e.negligencia;
       if (!ID_ESTADOS.has(e.estado)) e.estado = 'pendiente';
     }
