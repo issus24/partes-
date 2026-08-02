@@ -695,13 +695,17 @@ function abrirReporte() {
       <td>${novedades || '<span class="r-vacio">sin novedades</span>'}</td>
       <td class="r-est"><span class="pill" style="--c:${est.color}">${est.label}</span></td>
       <td class="r-ing">
-        ${v.ingreso ? fechaCorta(v.ingreso) : '—'}
-        ${dias !== null ? `<span class="r-dias">${dias} d</span>` : ''}
-        ${estaFinalizado(v) ? `
-          <span class="sello sello-mini">
-            <span class="sello-txt">Finalizado</span>
-            <span class="sello-fecha">${fechaCorta(v.finalizado)}</span>
-          </span>` : ''}
+        <div class="r-ing-caja">
+          <div>
+            <span class="r-ing-fecha">${v.ingreso ? fechaCorta(v.ingreso) : '—'}</span>
+            ${dias !== null ? `<span class="r-dias">${dias} d</span>` : ''}
+          </div>
+          ${estaFinalizado(v) ? `
+            <span class="sello sello-mini">
+              <span class="sello-txt">Finalizado</span>
+              <span class="sello-fecha">${fechaCorta(v.finalizado)}</span>
+            </span>` : ''}
+        </div>
       </td>
     </tr>`;
   }).join('');
