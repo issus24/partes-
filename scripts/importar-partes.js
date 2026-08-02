@@ -399,6 +399,37 @@ function armarEstadias(dias) {
   return estadias;
 }
 
+/* ------------------------------------------------------------------
+   Estadías que el parte dejó colgadas
+
+   Una unidad que se fue del taller y a la que nunca le marcaron
+   OPERATIVO queda abierta para siempre, y la app le cuenta los días
+   hasta hoy: había unas cuantas con 129 días. No siguieron cuatro meses
+   en el taller, dejaron de cargarlas.
+
+   Se dan por cerradas el último día que figuraron. El umbral es
+   deliberadamente holgado: el parte se saltea domingos y feriados, y una
+   unidad puede faltar unos días por un olvido de carga y seguir en el
+   taller. Recién cuando pasan dos semanas sin figurar no hay forma de
+   sostener que sigue adentro.
+
+   Quedan como operativas porque el modelo no da otra: finalizado y
+   operativo van juntos. Es una inferencia nuestra, no algo que diga el
+   parte.
+   ------------------------------------------------------------------ */
+
+const DIAS_PARA_DARLA_POR_IDA = 14;
+
+function cerrarLasColgadas(estadias, ultimoParte) {
+  let n = 0;
+  for (const e of estadias) {
+    if (e.finalizado || diffDias(e.ultimoDia, ultimoParte) <= DIAS_PARA_DARLA_POR_IDA) continue;
+    cerrar(e, e.ultimoDia);
+    n++;
+  }
+  return n;
+}
+
 /* core.js exige que una estadía operativa tenga fecha de cierre y que
    ninguna otra la tenga (migrar() lo corrige al cargar). Se respeta acá. */
 function cerrar(e, fecha) {
@@ -495,11 +526,15 @@ function importar() {
     }
   }
 
+  const ultimoParte = archivos[archivos.length - 1].replace('.csv', '');
+
   const vehiculos = [];
   const dudosas = [];
+  let colgadas = 0;
   for (const [patente, items] of [...porPatente].sort()) {
     if (patenteDudosa(patente)) dudosas.push(`${patente} (${items.length} filas)`);
     const estadias = armarEstadias(agruparPorDia(items));
+    colgadas += cerrarLasColgadas(estadias, ultimoParte);
     for (const [i, e] of estadias.entries()) {
       e.id = `imp-${patente}-${i + 1}`;
       delete e._vistos;
@@ -514,13 +549,12 @@ function importar() {
     });
   }
 
-  const ultimoParte = archivos[archivos.length - 1].replace('.csv', '');
-  return { vehiculos, archivos, ultimoParte, filasLeidas, rechazos, estadosRaros, dudosas };
+  return { vehiculos, archivos, ultimoParte, filasLeidas, rechazos, estadosRaros, dudosas, colgadas };
 }
 
 const diffDias = (a, b) => Math.round((new Date(b) - new Date(a)) / 86400000);
 
-function informe({ vehiculos, archivos, ultimoParte, filasLeidas, rechazos, estadosRaros, dudosas }) {
+function informe({ vehiculos, archivos, ultimoParte, filasLeidas, rechazos, estadosRaros, dudosas, colgadas }) {
   const estadias = vehiculos.flatMap(v => v.estadias);
   const abiertas = estadias.filter(e => !e.finalizado);
   const cerradas = estadias.filter(e => e.finalizado);
@@ -537,14 +571,13 @@ function informe({ vehiculos, archivos, ultimoParte, filasLeidas, rechazos, esta
   l(`Novedades          ${estadias.reduce((n, e) => n + Object.keys(e.updates).length, 0)} días con texto`);
 
   /* Una estadía queda abierta cuando el parte nunca la dio por operativa.
-     Si además la unidad dejó de figurar hace semanas, no es que siga en
-     el taller: es que dejaron de cargarla. Conviene saber cuántas son. */
+     Las que además dejaron de figurar hace más de dos semanas ya se
+     cerraron solas; el resto conviene tenerlo a la vista. */
   const enElUltimo = abiertas.filter(e => e.ultimoDia === ultimoParte);
-  const viejas = abiertas.filter(e => diffDias(e.ultimoDia, ultimoParte) > 14);
-  l(`\nDe las ${abiertas.length} estadías abiertas:`);
+  l(`\nDe las ${abiertas.length} estadías que quedan abiertas:`);
   l(`  ${enElUltimo.length} figuran todavía en el parte del ${ultimoParte}`);
-  l(`  ${abiertas.length - enElUltimo.length - viejas.length} dejaron de figurar hace 14 días o menos`);
-  l(`  ${viejas.length} dejaron de figurar hace más de 14 días — nunca las marcaron operativas`);
+  l(`  ${abiertas.length - enElUltimo.length} dejaron de figurar hace ${DIAS_PARA_DARLA_POR_IDA} días o menos`);
+  l(`  ${colgadas} se cerraron el último día que figuraron (más de ${DIAS_PARA_DARLA_POR_IDA} días sin aparecer)`);
 
   /* Una unidad no puede estar dos veces en el taller el mismo día:
      estadiaEnFecha() se queda con la primera que encuentra y la grilla
