@@ -190,6 +190,29 @@ $('#btnDiaNext').onclick = () => irADia(sumarDias(vista.fecha, 1));
 $('#btnHoy').onclick = () => irADia(hoyISO());
 $('#diaFecha').onchange = e => { if (e.target.value) irADia(e.target.value); };
 
+/* Los domingos y feriados no se carga parte. La grilla igual lista las
+   unidades que están en el taller, pero la columna de novedades sale
+   vacía y la pantalla parece sin datos. Así que la primera vez que
+   llegan los datos, si hoy todavía nadie escribió una novedad, se abre
+   en el último día que sí tuvo. Después manda la navegación, y el botón
+   "Hoy" vuelve siempre al día de hoy para cargar lo del día. */
+let diaUbicado = false;
+
+function ubicarDiaInicial() {
+  if (diaUbicado || !datos.vehiculos.length) return;
+  diaUbicado = true;
+
+  const hoy = hoyISO();
+  const conNovedades = datos.vehiculos
+    .flatMap(v => (v.estadias || []).flatMap(e => Object.keys(e.updates || {})))
+    .filter(f => f < hoy);
+
+  if (!conNovedades.length) return;
+  if (datos.vehiculos.some(v => estadiaEnFecha(v, hoy)?.updates?.[hoy]?.length)) return;
+
+  vista.fecha = conNovedades.sort().pop();
+}
+
 /* ---------- Chips de estado ---------- */
 
 function renderChips() {
@@ -919,5 +942,5 @@ llenarSelectEstados($('#vEstado'));
 $('#listaSectores').innerHTML = SECTORES.map(s => `<option value="${s}">`).join('');
 renderChips();
 render();
-iniciarSync(() => { renderChips(); render(); }, mostrarConexion);
+iniciarSync(() => { ubicarDiaInicial(); renderChips(); render(); }, mostrarConexion);
 mostrarConexion(false);
