@@ -47,7 +47,8 @@ function render() {
 
   for (const v of lista) {
     const est = estadoPorId(v.estado);
-    const dias = v.ingreso ? diffDias(v.ingreso, hoy) : null;
+    const dias = diasEnTaller(v);
+    const cerrado = estaFinalizado(v);
     const updates = v.updates?.[f] || [];
     const abiertos = pedidosAbiertos(v).length;
 
@@ -98,7 +99,8 @@ function render() {
 
       <td class="c-ing">
         ${v.ingreso ? `<span class="ing-fecha">${fechaCorta(v.ingreso)}/${v.ingreso.slice(2, 4)}</span>` : '<span class="nada">—</span>'}
-        ${dias !== null ? `<span class="ing-dias ${dias >= 15 ? 'alerta' : ''}">${dias} día${dias === 1 ? '' : 's'}</span>` : ''}
+        ${dias !== null ? `<span class="ing-dias ${cerrado ? 'cerrado' : dias >= 15 ? 'alerta' : ''}">${dias} día${dias === 1 ? '' : 's'}</span>` : ''}
+        ${cerrado ? selloHTML(v) : ''}
       </td>
 
       <td class="c-fill"></td>`;
@@ -113,12 +115,26 @@ function render() {
   $('#vacio').classList.toggle('hidden', datos.vehiculos.length > 0);
 }
 
+/* Sello de finalizado. La animación de estampado corre una sola vez por
+   vehículo: como render() rehace la tabla entera, sin este registro se
+   repetiría en cada redibujado. */
+const sellosEstampados = new Set();
+
+function selloHTML(v) {
+  const nuevo = !sellosEstampados.has(v.id);
+  sellosEstampados.add(v.id);
+  return `<span class="sello${nuevo ? ' estampando' : ''}">
+            <span class="sello-txt">Finalizado</span>
+            <span class="sello-fecha">${fechaCorta(v.finalizado)}/${v.finalizado.slice(2, 4)}</span>
+          </span>`;
+}
+
 /* Anchos calculados:
    · Problemas   → lo que necesite el texto más largo en pantalla.
    · Novedades   → la mitad del espacio que sobra (el resto queda libre,
                    absorbido por la columna vacía del final).
    El resto de las columnas tiene ancho fijo en el CSS. */
-const ANCHO_PAT = 210, ANCHO_EST = 210, ANCHO_ING = 130;
+const ANCHO_PAT = 210, ANCHO_EST = 210, ANCHO_ING = 150;
 
 function ajustarAnchos(lista) {
   const masLargo = lista.reduce((max, v) =>
@@ -326,16 +342,16 @@ $('#formVehiculo').addEventListener('submit', () => {
     ingreso: $('#vIngreso').value,
     problemas: leerProblemas(),
     pedidos: leerPedidos(),
-    estado: $('#vEstado').value,
   };
 
   let v;
   if (vehiculoEditando) {
     v = Object.assign(vehiculoPorId(vehiculoEditando), campos);
   } else {
-    v = { id: nuevoId(), ...campos, updates: {} };
+    v = { id: nuevoId(), ...campos, estado: ESTADO_DEFECTO, updates: {} };
     datos.vehiculos.push(v);
   }
+  cambiarEstado(v, $('#vEstado').value);
   guardarVehiculo(v);
   render();
 });
@@ -435,7 +451,8 @@ $('#tbody').addEventListener('change', ev => {
   if (!sel) return;
   const v = vehiculoPorId(sel.dataset.estado);
   if (!v) return;
-  v.estado = sel.value;
+  if (v.estado !== 'operativo') sellosEstampados.delete(v.id);   // que vuelva a animarse
+  cambiarEstado(v, sel.value);
   guardarVehiculo(v);
   render();
 });

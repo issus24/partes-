@@ -31,10 +31,12 @@ function renderLista() {
     const ultima = ultimaFechaUpdate(v);
     const nProb = (v.problemas || []).length;
 
-    const meta = [
-      nProb ? `${nProb} problema${nProb === 1 ? '' : 's'}` : '',
-      ultima ? `novedad ${fechaRelativa(ultima)}` : 'sin novedades',
-    ].filter(Boolean).join(' · ');
+    const meta = estaFinalizado(v)
+      ? `finalizado el ${fechaCorta(v.finalizado)}`
+      : [
+          nProb ? `${nProb} problema${nProb === 1 ? '' : 's'}` : '',
+          ultima ? `novedad ${fechaRelativa(ultima)}` : 'sin novedades',
+        ].filter(Boolean).join(' · ');
 
     const li = document.createElement('li');
     li.className = 'm-item';
@@ -87,9 +89,12 @@ function renderDetalle() {
   const v = vehiculoPorId(vehiculoAbierto);
   if (!v) return volverALista();
 
-  const dias = v.ingreso ? diffDias(v.ingreso, hoyISO()) : null;
+  const dias = diasEnTaller(v);
   $('#dPatente').innerHTML = patenteHTML(v.patente);
-  $('#dSub').textContent = dias === null ? '' : `${dias} día${dias === 1 ? '' : 's'} en taller`;
+  $('#dSub').textContent = dias === null ? ''
+    : estaFinalizado(v)
+      ? `finalizado el ${fechaCorta(v.finalizado)} · ${dias} día${dias === 1 ? '' : 's'} en taller`
+      : `${dias} día${dias === 1 ? '' : 's'} en taller`;
 
   // --- Estado (tocar para cambiar) ---
   const cont = $('#dEstados');
@@ -99,7 +104,7 @@ function renderDetalle() {
     b.className = 'm-est-btn' + (v.estado === e.id ? ' on' : '');
     b.style.color = v.estado === e.id ? e.color : '';
     b.innerHTML = `<span class="dot" style="background:${e.color}"></span>${e.label}`;
-    b.onclick = () => { v.estado = e.id; guardarVehiculo(v); renderDetalle(); };
+    b.onclick = () => { cambiarEstado(v, e.id); guardarVehiculo(v); renderDetalle(); };
     cont.appendChild(b);
   }
 

@@ -49,6 +49,24 @@ const pedidoEstadoPorId = id => ESTADOS_PEDIDO.find(e => e.id === id) || ESTADOS
 /* Pedidos que todavía esperan algo de compras. */
 const pedidosAbiertos = v => (v.pedidos || []).filter(p => !PEDIDO_CERRADO.includes(p.estado));
 
+/* ---------- Ciclo de vida del vehículo ---------- */
+
+/* Al pasar a operativo se registra la fecha y el conteo de días queda
+   congelado. Si vuelve a cualquier otro estado, el reloj sigue corriendo. */
+function cambiarEstado(v, nuevo) {
+  v.estado = nuevo;
+  if (nuevo === 'operativo') v.finalizado ||= hoyISO();
+  else delete v.finalizado;
+}
+
+const estaFinalizado = v => v.estado === 'operativo' && !!v.finalizado;
+
+/* Días en taller: hasta hoy, o hasta la fecha de finalización si ya cerró. */
+function diasEnTaller(v) {
+  if (!v.ingreso) return null;
+  return diffDias(v.ingreso, v.finalizado || hoyISO());
+}
+
 /* ------------------------------------------------------------------
    Categorías de problemas.
    La detección es por palabras clave (sin acentos, en minúscula): se cuenta
@@ -391,6 +409,11 @@ function migrar(d) {
 
   for (const v of d.vehiculos) {
     v.estado = traducir(v.estado) || ESTADO_DEFECTO;
+
+    // Los que ya estaban operativos antes de existir el sello no tienen
+    // fecha de cierre registrada: se les pone la de hoy.
+    if (v.estado === 'operativo' && !v.finalizado) { v.finalizado = hoyISO(); migrados.add(v.id); }
+    if (v.estado !== 'operativo' && v.finalizado) { delete v.finalizado; migrados.add(v.id); }
 
     // Antes los problemas eran un texto libre: cada renglón pasa a ser un problema.
     if (typeof v.problemas === 'string') {

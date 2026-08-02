@@ -240,7 +240,7 @@ body {
 .c-prob { width: var(--ancho-prob, 26%); }
 .c-nov  { width: var(--ancho-nov, 30%); }
 .c-est  { width: 210px; }
-.c-ing  { width: 130px; }
+.c-ing  { width: 150px; }
 .c-fill { width: auto; padding: 0 !important; }
 
 thead th {
@@ -387,6 +387,67 @@ tr.fila:hover .btn-add-upd { opacity: 1; }
 .ing-fecha { display: block; font-family: "Consolas", monospace; font-size: 14px; }
 .ing-dias { display: block; font-size: 11.5px; color: var(--txt-dim); margin-top: 3px; }
 .ing-dias.alerta { color: #e0a92a; font-weight: 600; }
+.ing-dias.cerrado { color: #2fae6b; }
+
+/* Sello de finalizado */
+.sello {
+  --tinta: #2fae6b;
+  position: relative;
+  display: grid;
+  place-content: center;
+  gap: 1px;
+  width: 96px;
+  height: 96px;
+  margin: 8px auto 2px;
+  border: 3px solid var(--tinta);
+  border-radius: 50%;
+  color: var(--tinta);
+  text-align: center;
+  transform: rotate(-11deg);
+  opacity: .88;
+  /* El borde irregular imita la tinta despareja de un sello real. */
+  filter: drop-shadow(0 0 1px rgba(47, 174, 107, .5));
+}
+.sello::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1.5px solid var(--tinta);
+  border-radius: 50%;
+  opacity: .75;
+}
+
+.sello-txt {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  line-height: 1.05;
+  padding: 0 6px;
+}
+.sello-fecha {
+  font-family: "Consolas", monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .3px;
+  padding-top: 3px;
+  margin-top: 2px;
+  border-top: 1.5px solid var(--tinta);
+}
+
+/* Golpe de sello: solo la primera vez que aparece. */
+.sello.estampando { animation: estampar .42s cubic-bezier(.2, 1.4, .4, 1) both; }
+
+@keyframes estampar {
+  0%   { transform: rotate(-11deg) scale(2.6); opacity: 0; }
+  55%  { opacity: .95; }
+  75%  { transform: rotate(-11deg) scale(.94); }
+  100% { transform: rotate(-11deg) scale(1); opacity: .88; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sello.estampando { animation: none; }
+}
 
 .vacio {
   position: absolute;
