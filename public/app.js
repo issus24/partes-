@@ -487,50 +487,109 @@ function abrirParte(id) {
   const est = estadoPorId(v.estado);
   const fechas = fechasConUpdates(v);
   const totalNov = fechas.reduce((n, f) => n + v.updates[f].length, 0);
-
-  $('#parteMeta').innerHTML = `${patenteHTML(v.patente)}
-    <span class="meta-txt">
-      <span class="pill" style="--c:${est.color}">${est.label}</span>
-      ingreso ${v.ingreso ? fechaLarga(v.ingreso) : '—'}
-      ${dias !== null ? `· ${dias} día${dias === 1 ? '' : 's'} en taller` : ''}
-      ${estaFinalizado(v) ? `· finalizado el ${fechaLarga(v.finalizado)}` : ''}
-    </span>`;
+  const peds = v.pedidos || [];
 
   const problemas = (v.problemas || []).map(p => {
     const c = categoriaPorId(p.categoria);
-    return `<li><span class="prob-ini" style="--cat:${c.color}">${c.inicial}</span>${escapar(p.texto)}</li>`;
+    return `<li>
+              <span class="prob-ini" style="--cat:${c.color}">${c.inicial}</span>
+              <span class="doc-prob-txt">${escapar(p.texto)}</span>
+              <span class="doc-prob-cat">${escapar(c.label)}</span>
+            </li>`;
   }).join('');
 
   $('#cuerpoParte').innerHTML = `
-    <section class="parte-bloque">
-      <h3>Problemas de ingreso</h3>
-      ${problemas ? `<ul class="parte-problemas">${problemas}</ul>`
-                  : '<p class="planilla-vacia">Sin problemas cargados.</p>'}
-    </section>
+    <article class="doc">
+      <h1 class="doc-titulo">Parte de trabajo</h1>
 
-    <section class="parte-bloque">
-      <h3>Novedades <span class="cuenta">${totalNov}</span></h3>
-      ${fechas.length ? `
-        <table class="planilla">
-          <thead>
-            <tr>
-              <th class="col-med">Fecha</th>
-              <th class="col-med">Sector</th>
-              <th>Novedad</th>
-              <th class="col-med">Responsable</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${fechas.map(f => v.updates[f].map((u, i) => `
-              <tr${i === 0 ? ' class="dia-nuevo"' : ''}>
-                <td class="col-med">${i === 0 ? fechaLarga(f) : ''}</td>
-                <td class="col-med"><span class="pill" style="--c:${colorSector(u.sector)}">${escapar(u.sector || '—')}</span></td>
-                <td>${escapar(u.texto || '')}</td>
-                <td class="col-med">${escapar(u.operario || '—')}</td>
-              </tr>`).join('')).join('')}
-          </tbody>
-        </table>` : '<p class="planilla-vacia">Todavía no hay novedades cargadas.</p>'}
-    </section>`;
+      <header class="doc-id">
+        ${patenteHTML(v.patente)}
+        <div class="doc-fecha">
+          <span class="doc-fecha-lbl">Fecha</span>
+          <span class="doc-fecha-val">${fechaLarga(hoyISO())}</span>
+        </div>
+      </header>
+
+      <section class="doc-seccion">
+        <h2>Problemas de ingreso</h2>
+        ${problemas ? `<ul class="doc-problemas">${problemas}</ul>`
+                    : '<p class="planilla-vacia">Sin problemas cargados.</p>'}
+      </section>
+
+      <section class="doc-seccion">
+        <h2>Repuestos utilizados</h2>
+        ${peds.length ? `
+          <table class="planilla">
+            <thead>
+              <tr>
+                <th class="col-num">Cant.</th>
+                <th>Artículo</th>
+                <th class="col-med">Estado</th>
+                <th class="col-med">Solicitó</th>
+                <th class="col-chico">Pedido</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${peds.map(p => {
+                const e = pedidoEstadoPorId(p.estado);
+                return `<tr>
+                  <td class="col-num">${p.cantidad || 1}</td>
+                  <td>${escapar(p.descripcion)}${p.nota ? `<span class="sub-nota">${escapar(p.nota)}</span>` : ''}</td>
+                  <td class="col-med"><span class="pill" style="--c:${e.color}">${e.label}</span></td>
+                  <td class="col-med">${escapar(p.solicitante || '—')}</td>
+                  <td class="col-chico">${p.fecha ? fechaCorta(p.fecha) : '—'}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>` : '<p class="planilla-vacia">No se pidieron repuestos para esta unidad.</p>'}
+      </section>
+
+      <section class="doc-seccion doc-cierre">
+        <div class="doc-datos">
+          <div class="doc-dato">
+            <span class="doc-dato-lbl">Fecha de ingreso</span>
+            <span class="doc-dato-val">${v.ingreso ? fechaLarga(v.ingreso) : '—'}</span>
+          </div>
+          <div class="doc-dato">
+            <span class="doc-dato-lbl">Días en taller</span>
+            <span class="doc-dato-val doc-dato-grande">${dias === null ? '—' : dias}</span>
+          </div>
+          <div class="doc-dato">
+            <span class="doc-dato-lbl">Estado</span>
+            <span class="doc-dato-val"><span class="pill" style="--c:${est.color}">${est.label}</span></span>
+          </div>
+        </div>
+        ${estaFinalizado(v) ? `
+          <span class="sello sello-doc">
+            <span class="sello-txt">Finalizado</span>
+            <span class="sello-fecha">${fechaCorta(v.finalizado)}/${v.finalizado.slice(2, 4)}</span>
+          </span>` : ''}
+      </section>
+
+      <section class="doc-seccion">
+        <h2>Novedades <span class="cuenta">${totalNov}</span></h2>
+        ${fechas.length ? `
+          <table class="planilla">
+            <thead>
+              <tr>
+                <th class="col-med">Fecha</th>
+                <th class="col-med">Sector</th>
+                <th>Novedad</th>
+                <th class="col-med">Responsable</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${fechas.map(f => v.updates[f].map((u, i) => `
+                <tr${i === 0 ? ' class="dia-nuevo"' : ''}>
+                  <td class="col-med">${i === 0 ? fechaLarga(f) : ''}</td>
+                  <td class="col-med"><span class="pill" style="--c:${colorSector(u.sector)}">${escapar(u.sector || '—')}</span></td>
+                  <td>${escapar(u.texto || '')}</td>
+                  <td class="col-med">${escapar(u.operario || '—')}</td>
+                </tr>`).join('')).join('')}
+            </tbody>
+          </table>` : '<p class="planilla-vacia">Todavía no hay novedades cargadas.</p>'}
+      </section>
+    </article>`;
 
   $('#dlgParte').showModal();
 }
