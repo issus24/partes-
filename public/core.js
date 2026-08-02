@@ -30,6 +30,18 @@ const ESTADOS_VIEJOS = {
 
 const estadoPorId = id => ESTADOS.find(e => e.id === id) || ESTADOS[0];
 
+/* Orden en que se agrupan las unidades cuando se ordena la grilla por
+   estado. No es el mismo orden que ESTADOS, que fija los colores y el
+   orden de los chips: acá manda cómo se recorre el taller. Primero lo
+   que ya está listo, después lo que se está trabajando, y al final lo
+   que ni siquiera entró o se fue a un taller de afuera. */
+const ORDEN_POR_ESTADO = ['operativo', 'pendiente', 'repuestos', 'ingreso', 'externo'];
+
+const ordenDeEstado = id => {
+  const i = ORDEN_POR_ESTADO.indexOf(id);
+  return i < 0 ? ORDEN_POR_ESTADO.length : i;   // un estado desconocido va al fondo
+};
+
 /* ---------- Estados de un pedido de repuestos ---------- */
 
 const ESTADOS_PEDIDO = [

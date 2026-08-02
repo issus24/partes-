@@ -4,11 +4,16 @@
    estado y fecha de ingreso. Requiere core.js cargado antes.
    ============================================================ */
 
+const ORDEN_KEY = STORAGE_KEY + '-orden-estado';
+
 const vista = {
   fecha: hoyISO(),               // día que se está viendo
   buscar: '',
   estadosVisibles: new Set(ESTADOS.map(e => e.id)),
   ocultarTerminados: false,
+  // Cómo prefiere verlo cada uno se recuerda: la oficina y el taller no
+  // recorren la lista igual, y no vale la pena reelegirlo cada mañana.
+  porEstado: localStorage.getItem(ORDEN_KEY) === '1',
 };
 
 let vehiculoEditando = null;   // id o null (=nuevo)
@@ -31,6 +36,12 @@ function filasDelDia() {
     if (q && !normalizar(textoBuscable(v)).includes(normalizar(q))) continue;
     filas.push({ v, e });
   }
+
+  /* Los vehículos ya vienen por patente, y sort() en JS es estable: al
+     ordenar por estado, dentro de cada grupo se mantiene el orden
+     alfabético en vez de quedar como salga. */
+  if (vista.porEstado) filas.sort((a, b) => ordenDeEstado(a.e.estado) - ordenDeEstado(b.e.estado));
+
   return filas;
 }
 
@@ -130,6 +141,7 @@ function render() {
   ajustarAnchos(lista);
 
   // --- Auxiliares ---
+  $('#btnOrden').classList.toggle('on', vista.porEstado);
   $('#contador').textContent = `${lista.length} unidad${lista.length === 1 ? '' : 'es'} este día · ${datos.vehiculos.length} en total`;
   $('#vacio').classList.toggle('hidden', datos.vehiculos.length > 0);
 }
@@ -193,6 +205,14 @@ $('#btnDiaPrev').onclick = () => irADia(sumarDias(vista.fecha, -1));
 $('#btnDiaNext').onclick = () => irADia(sumarDias(vista.fecha, 1));
 $('#btnHoy').onclick = () => irADia(hoyISO());
 $('#diaFecha').onchange = e => { if (e.target.value) irADia(e.target.value); };
+
+/* ---------- Orden de la lista ---------- */
+
+$('#btnOrden').onclick = () => {
+  vista.porEstado = !vista.porEstado;
+  localStorage.setItem(ORDEN_KEY, vista.porEstado ? '1' : '0');
+  render();
+};
 
 /* ---------- Chips de estado ---------- */
 

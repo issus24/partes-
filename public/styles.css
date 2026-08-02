@@ -214,6 +214,11 @@ body {
 .chip .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
 .chip.on { color: var(--txt); border-color: currentColor; }
 
+/* El botón de orden vive entre los chips de estado y se comporta igual,
+   pero no filtra nada: la línea punteada lo separa de los que sí. */
+.chip-orden { border-style: dashed; font-family: inherit; }
+.chip-orden.on { border-style: solid; background: var(--panel); }
+
 .toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--txt-dim); cursor: pointer; }
 .toggle input { accent-color: var(--accent); }
 .contador { margin-left: auto; font-size: 12px; color: var(--txt-dim); }
