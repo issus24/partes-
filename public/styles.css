@@ -761,6 +761,55 @@ tr.fila-cerrada td { height: 94px; }
 .doc-tec-val.mono { font-family: "Consolas", monospace; font-size: 13.5px; letter-spacing: .5px; }
 .doc-tec-val:empty::after { content: "—"; color: var(--txt-dim); }
 
+/* ---------- Reporte del día ---------- */
+.dlg-apaisado { width: 1180px; }
+.doc-reporte { max-width: none; }
+
+.rep-dia-val { display: block; font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+
+.tabla-reporte { table-layout: fixed; }
+.tabla-reporte th, .tabla-reporte td { padding: 7px 9px; vertical-align: top; }
+.tabla-reporte .r-pat  { width: 108px; }
+.tabla-reporte .r-est  { width: 130px; }
+.tabla-reporte .r-ing  { width: 96px; }
+
+td.r-pat {
+  font-family: "Consolas", monospace;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  white-space: nowrap;
+}
+
+/* Texto corrido: cada ítem seguido del anterior, separado por un punto. */
+.r-item { display: inline; }
+.r-sep { color: var(--txt-dim); margin: 0 6px; }
+
+.r-ini {
+  display: inline-block;
+  min-width: 14px;
+  margin-right: 4px;
+  padding: 0 3px;
+  border-radius: 3px;
+  background: var(--cat);
+  color: #101010;
+  font-size: 10px;
+  font-weight: 800;
+  text-align: center;
+}
+.r-sector {
+  margin-right: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  color: var(--txt-dim);
+}
+.r-item i { color: var(--txt-dim); font-style: normal; font-size: 11px; }
+.r-vacio { color: var(--txt-dim); font-style: italic; }
+.r-dias { display: block; font-size: 11px; color: var(--txt-dim); }
+.r-fin { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; color: #2fae6b; }
+
 /* Cierre: ingreso, días y sello */
 .doc-cierre {
   display: flex;
@@ -867,6 +916,22 @@ tr.fila-cerrada td { height: 94px; }
   .doc-tec-val.mono { font-size: 11pt; }
 
   .planilla tfoot td { border-top-color: #000 !important; color: #000 !important; font-size: 9.5pt; }
+
+  /* El reporte del día sale apaisado: son cinco columnas anchas. */
+  @page apaisado { size: A4 landscape; margin: 10mm; }
+  .doc-reporte { page: apaisado; font-size: 9.5pt; }
+  .doc-reporte .doc-titulo { font-size: 17pt; margin-bottom: 5mm; padding-bottom: 3mm; }
+  .doc-reporte .doc-id { margin-bottom: 5mm; }
+  .rep-dia-val { font-size: 13pt; }
+
+  .tabla-reporte { font-size: 9pt; }
+  .tabla-reporte th { font-size: 7.5pt; padding: 1.6mm 2mm; }
+  .tabla-reporte td { padding: 1.8mm 2mm; }
+  td.r-pat { font-size: 10pt; }
+  .r-ini { font-size: 7.5pt; }
+  .r-sector { font-size: 7.5pt; }
+  .r-item i, .r-dias { font-size: 8pt; }
+  .r-fin { font-size: 7.5pt; }
 
   .doc-cierre { padding: 5mm 6mm; border-width: 1.5px; border-radius: 3mm; }
   .doc-datos { gap: 16mm; }

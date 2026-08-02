@@ -651,6 +651,77 @@ function abrirParte(id) {
   $('#dlgParte').showModal();
 }
 
+/* ---------- Reporte del día ---------- */
+
+/* En papel conviene el texto corrido: los problemas y las novedades van
+   uno seguido del otro separados por un punto medio, en vez de apilados
+   como en la pantalla. Entran muchas más unidades por hoja. */
+function abrirReporte() {
+  const f = vista.fecha;
+  const lista = vehiculosFiltrados();
+
+  const filas = lista.map(v => {
+    const est = estadoPorId(v.estado);
+    const dias = diasEnTaller(v);
+
+    const problemas = (v.problemas || []).map(p => {
+      const c = categoriaPorId(p.categoria);
+      return `<span class="r-item"><b class="r-ini" style="--cat:${c.color}">${c.inicial}</b>${escapar(p.texto)}</span>`;
+    }).join('<span class="r-sep">·</span>');
+
+    const novedades = (v.updates?.[f] || []).map(u =>
+      `<span class="r-item">${u.sector ? `<b class="r-sector">${escapar(u.sector)}</b>` : ''}${escapar(u.texto || '')}${u.operario ? ` <i>(${escapar(u.operario)})</i>` : ''}</span>`
+    ).join('<span class="r-sep">·</span>');
+
+    return `<tr>
+      <td class="r-pat">${escapar(formatearPatente(v.patente))}</td>
+      <td>${problemas || '<span class="r-vacio">—</span>'}</td>
+      <td>${novedades || '<span class="r-vacio">sin novedades</span>'}</td>
+      <td class="r-est"><span class="pill" style="--c:${est.color}">${est.label}</span></td>
+      <td class="r-ing">
+        ${v.ingreso ? fechaCorta(v.ingreso) : '—'}
+        ${dias !== null ? `<span class="r-dias">${dias} d</span>` : ''}
+        ${estaFinalizado(v) ? '<span class="r-fin">finalizado</span>' : ''}
+      </td>
+    </tr>`;
+  }).join('');
+
+  $('#cuerpoReporte').innerHTML = `
+    <article class="doc doc-reporte">
+      <h1 class="doc-titulo">Parte de trabajo</h1>
+
+      <header class="doc-id">
+        <div class="rep-dia">
+          <span class="doc-fecha-lbl">Día</span>
+          <span class="rep-dia-val">${fechaLargaCompleta(f)}</span>
+        </div>
+        <div class="doc-fecha">
+          <span class="doc-fecha-lbl">Unidades</span>
+          <span class="doc-fecha-val">${lista.length}</span>
+        </div>
+      </header>
+
+      ${lista.length ? `
+        <table class="planilla tabla-reporte">
+          <thead>
+            <tr>
+              <th class="r-pat">Patente</th>
+              <th>Problemas de ingreso</th>
+              <th>Novedades del día</th>
+              <th class="r-est">Estado</th>
+              <th class="r-ing">Ingreso</th>
+            </tr>
+          </thead>
+          <tbody>${filas}</tbody>
+        </table>`
+      : '<p class="planilla-vacia">No hay unidades para este día con los filtros aplicados.</p>'}
+    </article>`;
+
+  $('#dlgReporte').showModal();
+}
+
+$('#btnReporte').onclick = abrirReporte;
+
 document.querySelectorAll('[data-imprimir]').forEach(b => b.onclick = () => window.print());
 
 /* ---------- Interacción de la tabla ---------- */

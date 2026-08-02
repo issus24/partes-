@@ -67,6 +67,7 @@
     <div class="dia-extra">
       <input type="date" id="diaFecha" class="dia-input" title="Ir a una fecha">
       <button id="btnHoy" class="btn">Hoy</button>
+      <button id="btnReporte" class="btn" title="Reporte del día en PDF">📄 PDF</button>
     </div>
   </section>
 
@@ -202,6 +203,17 @@
       </div>
     </header>
     <div class="planilla-wrap" id="cuerpoParte"></div>
+  </dialog>
+
+  <!-- Reporte del día: el parte en pantalla, en una hoja -->
+  <dialog id="dlgReporte" class="dlg dlg-ancho dlg-apaisado">
+    <header class="dlg-cab dlg-cab-suelta">
+      <div class="dlg-cab-acc">
+        <button type="button" class="btn btn-primary" data-imprimir>Guardar PDF</button>
+        <button type="button" class="btn" data-cerrar>Cerrar</button>
+      </div>
+    </header>
+    <div class="planilla-wrap" id="cuerpoReporte"></div>
   </dialog>
 
   <input type="file" id="fileImport" accept="application/json" hidden>
