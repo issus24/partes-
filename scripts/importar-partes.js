@@ -474,16 +474,62 @@ function cerrar(e, fecha) {
 }
 
 /* El detalle se repite igual todos los días que la unidad sigue en el
-   taller: es el mismo problema, no uno nuevo. */
+   taller: es el mismo problema, no uno nuevo.
+
+   Y no siempre se repite igual. La fila del parte se va reescribiendo:
+   "revisar caja de cambios (no funciona la marcha atrás)" un día,
+   "…- citado 10:30" al otro, "tapa de cilindro" y después "tapa de
+   cilindro - reemplazado". Guardar cada redacción deja la unidad con el
+   mismo problema listado tres veces.
+
+   Cuando un texto es continuación de otro — uno empieza igual que el
+   otro — es la misma avería mejor descrita, y queda la redacción más
+   reciente, que es como figura hoy en el parte. Si divergen en el medio
+   ("revisión de motor - sigue de viaje" contra "…- reemplazado") son
+   dos cosas distintas y se guardan las dos: cortar por parecido ahí
+   perdería problemas de verdad. */
 function sumarProblema(e, { texto, categoria }) {
   const t = enMinuscula(texto);
   if (!t) return;
-  if (e.problemas.some(p => p.texto === t)) return;
-  e.problemas.push({
+
+  const nuevo = {
     texto: t,
     categoria: categoria || detectarCategoria(t),
     manual: !!categoria,
-  });
+  };
+
+  const i = e.problemas.findIndex(p => esLaMisma(p.texto, t));
+  if (i >= 0) e.problemas[i] = nuevo;
+  else e.problemas.push(nuevo);
+}
+
+/* ¿Dos redacciones de la misma avería?
+
+   No alcanza con que una empiece igual que la otra: la fila se reescribe
+   por el final y las versiones divergen.
+
+       revisión de motor (operación arcor) - se debe enviar a ivecam ee
+       revisión de motor (operación arcor) - en taller ivecam ee
+       revisión de motor (operación arcor) - en taller ds
+
+   Son la misma unidad y el mismo motor, contados en tres momentos. Se las
+   compara por cuánto comparten desde el principio: si el arranque común
+   cubre más de la mitad del texto más corto, es la misma avería que
+   cambió de estado. Lo que empieza distinto se deja en paz —
+
+       soporte de escape (operación ecommerce)
+       vaciar catalizador (operación ecommerce)
+
+   se parecen por el final, pero son dos trabajos distintos. */
+const MIN_PARECIDO = 0.55;
+
+function esLaMisma(a, b) {
+  if (a === b) return true;
+  const corto = Math.min(a.length, b.length);
+  let comun = 0;
+  while (comun < corto && a[comun] === b[comun]) comun++;
+  // Un arranque común muy corto no dice nada: "cambiar x" contra "cambiar y".
+  return comun >= 15 && comun / corto >= MIN_PARECIDO;
 }
 
 /* La observación de cada fila entra como novedad del día en que el parte
@@ -516,7 +562,10 @@ function sumarUpdates(e, dia) {
   if (textos.join('|') === vigente) return;
   e._vigente = textos;
 
-  e.updates[dia.fecha] = textos.map(texto => ({ sector: 'taller', texto, operario: '' }));
+  /* Sector vacío: el parte no dice de qué sector salió la observación, y
+     rotularlas todas "taller" no informa nada — solo repite la misma
+     etiqueta en las 83 novedades y come ancho de columna en el papel. */
+  e.updates[dia.fecha] = textos.map(texto => ({ sector: '', texto, operario: '' }));
 }
 
 /* ------------------------------------------------------------------

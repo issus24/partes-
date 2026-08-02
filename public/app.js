@@ -741,8 +741,13 @@ function abrirReporte() {
       return `<span class="r-item"><b class="r-ini" style="--cat:${c.color}">${c.inicial}</b>${escapar(p.texto)}</span>`;
     }).join('<span class="r-sep">·</span>');
 
-    const novedades = (e.updates?.[f] || []).map(u =>
-      `<span class="r-item">${u.sector ? `<b class="r-sector">${escapar(u.sector)}</b>` : ''}${escapar(u.texto || '')}${u.operario ? ` <i>(${escapar(u.operario)})</i>` : ''}</span>`
+    /* La novedad sigue en pie hasta que la reemplacen: en papel también
+       tiene que salir la vigente, no solo la que se escribió justo ese
+       día. Cuando viene de antes se aclara de cuándo es. */
+    const vig = novedadesVigentes(e, f);
+    const desde = vig && vig.fecha !== f ? ` <i>(${fechaCorta(vig.fecha)})</i>` : '';
+    const novedades = (vig?.lista || []).map(u =>
+      `<span class="r-item">${u.sector ? `<b class="r-sector">${escapar(u.sector)}</b>` : ''}${escapar(u.texto || '')}${u.operario ? ` <i>(${escapar(u.operario)})</i>` : ''}${desde}</span>`
     ).join('<span class="r-sep">·</span>');
 
     return `<tr>
@@ -783,7 +788,7 @@ function abrirReporte() {
             <tr>
               <th class="r-pat">Patente</th>
               <th>Problemas de ingreso</th>
-              <th>Novedades del día</th>
+              <th>Novedades</th>
               <th class="r-est">Estado</th>
               <th class="r-ing">Ingreso</th>
               <th class="r-sal">Salida</th>

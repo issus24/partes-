@@ -791,20 +791,27 @@ tr.fila-cerrada td { height: 94px; }
 .rep-dia-val { display: block; font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
 
 /* Todo el cuadro en 14px; las marcas auxiliares escalan en em para
-   mantener la proporción. */
-.tabla-reporte { table-layout: fixed; font-size: 14px; }
+   mantener la proporción. El interlineado va ajustado porque las celdas
+   que se van a dos renglones son las que definen el alto de la fila. */
+.tabla-reporte { table-layout: fixed; font-size: 14px; line-height: 1.28; }
 .tabla-reporte th, .tabla-reporte td {
-  padding: 8px 10px;
+  padding: 5px 9px;
   vertical-align: top;
   border-right: 1px solid var(--line-soft);   /* separador tenue */
 }
 .tabla-reporte th:last-child, .tabla-reporte td:last-child { border-right: 0; }
 .tabla-reporte th { font-size: .78em; text-align: center; }
 
-.tabla-reporte .r-pat  { width: 120px; }
+/* Las columnas fijas se llevan lo mínimo: cada píxel que sueltan es uno
+   menos que las de texto necesitan para no irse a dos renglones.
+   Estado no se toca — "Pendiente de ingreso" no entra en menos de 140px
+   y la píldora partida en dos renglones agranda la fila en vez de
+   achicarla, que es justo lo contrario de lo que se busca. */
+.tabla-reporte .r-pat  { width: 104px; }
 .tabla-reporte .r-est  { width: 140px; }
-.tabla-reporte .r-ing  { width: 92px; }
-.tabla-reporte .r-sal  { width: 92px; }
+.tabla-reporte .r-ing  { width: 84px; }
+.tabla-reporte .r-sal  { width: 62px; }
+.tabla-reporte .pill { white-space: nowrap; }
 
 td.r-pat, td.r-est, td.r-ing, td.r-sal { text-align: center; }
 td.r-est { vertical-align: middle; }   /* la píldora queda centrada en la fila */
@@ -846,8 +853,11 @@ td.r-pat {
 .r-vacio { color: var(--txt-dim); font-style: italic; }
 .tabla-reporte .pill { font-size: .72em; }
 
-.r-ing-fecha { display: block; white-space: nowrap; }
-.r-dias { display: block; font-size: .82em; color: var(--txt-dim); }
+/* Fecha y días van en el mismo renglón. Apilados obligaban a cada fila a
+   tener dos líneas de alto aunque el problema fuera de una sola: era lo
+   que más filas costaba por hoja. */
+.r-ing-fecha { white-space: nowrap; }
+.r-dias { font-size: .82em; color: var(--txt-dim); white-space: nowrap; margin-left: 4px; }
 
 
 /* Cierre: ingreso, días y sello */
@@ -957,14 +967,19 @@ td.r-pat {
 
   .planilla tfoot td { border-top-color: #000 !important; color: #000 !important; font-size: 9.5pt; }
 
-  /* El reporte del día sale apaisado: son cinco columnas anchas. */
-  .doc-reporte .doc-titulo { font-size: 17pt; margin-bottom: 5mm; padding-bottom: 3mm; }
-  .doc-reporte .doc-id { margin-bottom: 5mm; }
-  .rep-dia-val { font-size: 13pt; }
+  /* El reporte del día sale apaisado: son cinco columnas anchas.
+     El encabezado se lleva lo justo — cada milímetro que suelta arriba
+     es una fila más de unidades abajo. */
+  .doc-reporte .doc-titulo { font-size: 15pt; margin-bottom: 3mm; padding-bottom: 2mm; }
+  .doc-reporte .doc-id { margin-bottom: 3mm; }
+  .rep-dia-val { font-size: 11.5pt; }
 
-  /* El cuadro conserva sus 14px: se ven igual en pantalla y en papel. */
-  .tabla-reporte th { padding: 1.8mm 2.5mm; }
-  .tabla-reporte td { padding: 2mm 2.5mm; }
+  /* El cuadro conserva sus 14px: se ven igual en pantalla y en papel.
+     Lo que se recorta es el aire, no el tamaño de la letra: la planilla
+     se lee a un metro de distancia colgada en el taller. */
+  .tabla-reporte th { padding: 1.2mm 2mm; }
+  .tabla-reporte td { padding: 1.2mm 2mm; }
+  .tabla-reporte .pill { padding: .2mm 1.6mm; }
   .tabla-reporte th, .tabla-reporte td { border-right-color: #ccc !important; }
   .tabla-reporte th:last-child, .tabla-reporte td:last-child { border-right: 0 !important; }
 
