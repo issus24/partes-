@@ -770,21 +770,32 @@ tr.fila-cerrada td { height: 94px; }
 /* Todo el cuadro en 14px; las marcas auxiliares escalan en em para
    mantener la proporción. */
 .tabla-reporte { table-layout: fixed; font-size: 14px; }
-.tabla-reporte th, .tabla-reporte td { padding: 8px 9px; vertical-align: top; }
-.tabla-reporte th { font-size: .78em; }
+.tabla-reporte th, .tabla-reporte td {
+  padding: 8px 10px;
+  vertical-align: top;
+  border-right: 1px solid var(--line-soft);   /* separador tenue */
+}
+.tabla-reporte th:last-child, .tabla-reporte td:last-child { border-right: 0; }
+.tabla-reporte th { font-size: .78em; text-align: center; }
+
 .tabla-reporte .r-pat  { width: 120px; }
 .tabla-reporte .r-est  { width: 140px; }
-.tabla-reporte .r-ing  { width: 152px; }
+.tabla-reporte .r-ing  { width: 92px; }
+.tabla-reporte .r-sal  { width: 92px; }
 
+td.r-pat, td.r-est, td.r-ing, td.r-sal { text-align: center; }
 td.r-pat {
   font-family: "Consolas", monospace;
   font-weight: 700;
   letter-spacing: .5px;
   white-space: nowrap;
 }
+.r-salida { color: #2fae6b; font-weight: 700; }
 
-/* Texto corrido: cada ítem seguido del anterior, separado por un punto. */
-.r-item { display: inline; }
+/* Texto corrido: cada ítem seguido del anterior, separado por un punto.
+   Cada ítem es un bloque en línea, así nunca se parte a mitad: la marca
+   de especialidad o de sector queda siempre pegada a su texto. */
+.r-item { display: inline-block; vertical-align: top; max-width: 100%; }
 .r-sep { color: var(--txt-dim); margin: 0 6px; }
 
 .r-ini {
@@ -811,26 +822,9 @@ td.r-pat {
 .r-vacio { color: var(--txt-dim); font-style: italic; }
 .tabla-reporte .pill { font-size: .72em; }
 
-/* Ingreso: fecha y sello uno al lado del otro */
-.r-ing-caja { display: flex; align-items: center; gap: 9px; }
 .r-ing-fecha { display: block; white-space: nowrap; }
 .r-dias { display: block; font-size: .82em; color: var(--txt-dim); }
 
-/* Sello chico, para que entre en la columna de ingreso del reporte */
-.sello-mini {
-  width: 62px;
-  height: 62px;
-  border-width: 2px;
-  flex: 0 0 auto;
-}
-.sello-mini::before { inset: 3px; border-width: 1px; }
-.sello-mini .sello-txt { font-size: 7.5px; letter-spacing: .2px; padding: 0 3px; }
-.sello-mini .sello-fecha {
-  font-size: 7.5px;
-  margin: 1px 5px 0;
-  padding-top: 1px;
-  border-top-width: 1px;
-}
 
 /* Cierre: ingreso, días y sello */
 .doc-cierre {
@@ -945,11 +939,10 @@ td.r-pat {
   .rep-dia-val { font-size: 13pt; }
 
   /* El cuadro conserva sus 14px: se ven igual en pantalla y en papel. */
-  .tabla-reporte th { padding: 1.8mm 2mm; }
-  .tabla-reporte td { padding: 2mm 2mm; }
-  .sello-mini { width: 16mm; height: 16mm; border-width: 1.5px; }
-  .sello-mini .sello-txt { font-size: 6pt; }
-  .sello-mini .sello-fecha { font-size: 6pt; }
+  .tabla-reporte th { padding: 1.8mm 2.5mm; }
+  .tabla-reporte td { padding: 2mm 2.5mm; }
+  .tabla-reporte th, .tabla-reporte td { border-right-color: #ccc !important; }
+  .tabla-reporte th:last-child, .tabla-reporte td:last-child { border-right: 0 !important; }
 
   .doc-cierre { padding: 5mm 6mm; border-width: 1.5px; border-radius: 3mm; }
   .doc-datos { gap: 16mm; }

@@ -695,17 +695,13 @@ function abrirReporte() {
       <td>${novedades || '<span class="r-vacio">sin novedades</span>'}</td>
       <td class="r-est"><span class="pill" style="--c:${est.color}">${est.label}</span></td>
       <td class="r-ing">
-        <div class="r-ing-caja">
-          <div>
-            <span class="r-ing-fecha">${v.ingreso ? fechaCorta(v.ingreso) : '—'}</span>
-            ${dias !== null ? `<span class="r-dias">${dias} d</span>` : ''}
-          </div>
-          ${estaFinalizado(v) ? `
-            <span class="sello sello-mini">
-              <span class="sello-txt">Finalizado</span>
-              <span class="sello-fecha">${fechaCorta(v.finalizado)}</span>
-            </span>` : ''}
-        </div>
+        <span class="r-ing-fecha">${v.ingreso ? fechaCorta(v.ingreso) : '—'}</span>
+        ${dias !== null ? `<span class="r-dias">${dias} d</span>` : ''}
+      </td>
+      <td class="r-sal">
+        ${estaFinalizado(v)
+          ? `<span class="r-ing-fecha r-salida">${fechaCorta(v.finalizado)}</span>`
+          : '<span class="r-vacio">—</span>'}
       </td>
     </tr>`;
   }).join('');
@@ -734,6 +730,7 @@ function abrirReporte() {
               <th>Novedades del día</th>
               <th class="r-est">Estado</th>
               <th class="r-ing">Ingreso</th>
+              <th class="r-sal">Salida</th>
             </tr>
           </thead>
           <tbody>${filas}</tbody>
