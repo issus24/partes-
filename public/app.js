@@ -103,6 +103,15 @@ function render() {
         ${cerrado ? selloHTML(v) : ''}
       </td>
 
+      <td class="c-acc">
+        <button type="button" class="btn-ficha" data-repuestos="${v.id}" title="Ver repuestos solicitados">
+          ⛭ Repuestos${abiertos ? ` <b>${abiertos}</b>` : ''}
+        </button>
+        <button type="button" class="btn-ficha" data-parte="${v.id}" title="Ver el parte de trabajo completo">
+          🗒 Parte
+        </button>
+      </td>
+
       <td class="c-fill"></td>`;
 
     tbody.appendChild(tr);
@@ -134,7 +143,7 @@ function selloHTML(v) {
    · Novedades   → la mitad del espacio que sobra (el resto queda libre,
                    absorbido por la columna vacía del final).
    El resto de las columnas tiene ancho fijo en el CSS. */
-const ANCHO_PAT = 210, ANCHO_EST = 210, ANCHO_ING = 175;
+const ANCHO_PAT = 210, ANCHO_EST = 210, ANCHO_ING = 175, ANCHO_ACC = 130;
 
 function ajustarAnchos(lista) {
   const masLargo = lista.reduce((max, v) =>
@@ -142,7 +151,7 @@ function ajustarAnchos(lista) {
   const prob = Math.min(560, Math.max(200, Math.round(masLargo * 7.1) + 62));
 
   const total = document.querySelector('.tabla-wrap').clientWidth;
-  const sobra = total - (ANCHO_PAT + prob + ANCHO_EST + ANCHO_ING);
+  const sobra = total - (ANCHO_PAT + prob + ANCHO_EST + ANCHO_ING + ANCHO_ACC);
   const nov = Math.max(240, Math.round(sobra * 0.5));
 
   const tabla = document.querySelector('.parte');
@@ -430,11 +439,115 @@ $('#btnBorrarUpdate').addEventListener('click', () => {
   $('#dlgUpdate').close();
 });
 
+/* ---------- Planilla de repuestos ---------- */
+
+function abrirRepuestos(id) {
+  const v = vehiculoPorId(id);
+  if (!v) return;
+  const peds = v.pedidos || [];
+  const abiertos = pedidosAbiertos(v).length;
+
+  $('#repMeta').innerHTML = `${patenteHTML(v.patente)}
+    <span class="meta-txt">${peds.length} pedido${peds.length === 1 ? '' : 's'} · ${abiertos} sin cerrar</span>`;
+
+  $('#cuerpoRepuestos').innerHTML = peds.length ? `
+    <table class="planilla">
+      <thead>
+        <tr>
+          <th class="col-num">Cant.</th>
+          <th>Artículo</th>
+          <th class="col-med">Estado</th>
+          <th class="col-med">Solicitó</th>
+          <th class="col-med">Fecha</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${peds.map(p => {
+          const e = pedidoEstadoPorId(p.estado);
+          return `<tr>
+            <td class="col-num">${p.cantidad || 1}</td>
+            <td>${escapar(p.descripcion)}${p.nota ? `<span class="sub-nota">${escapar(p.nota)}</span>` : ''}</td>
+            <td class="col-med"><span class="pill" style="--c:${e.color}">${e.label}</span></td>
+            <td class="col-med">${escapar(p.solicitante || '—')}</td>
+            <td class="col-med">${p.fecha ? fechaCorta(p.fecha) : '—'}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>` : '<p class="planilla-vacia">Esta unidad no tiene repuestos solicitados.</p>';
+
+  $('#dlgRepuestos').showModal();
+}
+
+/* ---------- Planilla del parte de trabajo ---------- */
+
+function abrirParte(id) {
+  const v = vehiculoPorId(id);
+  if (!v) return;
+  const dias = diasEnTaller(v);
+  const est = estadoPorId(v.estado);
+  const fechas = fechasConUpdates(v);
+  const totalNov = fechas.reduce((n, f) => n + v.updates[f].length, 0);
+
+  $('#parteMeta').innerHTML = `${patenteHTML(v.patente)}
+    <span class="meta-txt">
+      <span class="pill" style="--c:${est.color}">${est.label}</span>
+      ingreso ${v.ingreso ? fechaLarga(v.ingreso) : '—'}
+      ${dias !== null ? `· ${dias} día${dias === 1 ? '' : 's'} en taller` : ''}
+      ${estaFinalizado(v) ? `· finalizado el ${fechaLarga(v.finalizado)}` : ''}
+    </span>`;
+
+  const problemas = (v.problemas || []).map(p => {
+    const c = categoriaPorId(p.categoria);
+    return `<li><span class="prob-ini" style="--cat:${c.color}">${c.inicial}</span>${escapar(p.texto)}</li>`;
+  }).join('');
+
+  $('#cuerpoParte').innerHTML = `
+    <section class="parte-bloque">
+      <h3>Problemas de ingreso</h3>
+      ${problemas ? `<ul class="parte-problemas">${problemas}</ul>`
+                  : '<p class="planilla-vacia">Sin problemas cargados.</p>'}
+    </section>
+
+    <section class="parte-bloque">
+      <h3>Novedades <span class="cuenta">${totalNov}</span></h3>
+      ${fechas.length ? `
+        <table class="planilla">
+          <thead>
+            <tr>
+              <th class="col-med">Fecha</th>
+              <th class="col-med">Sector</th>
+              <th>Novedad</th>
+              <th class="col-med">Responsable</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${fechas.map(f => v.updates[f].map((u, i) => `
+              <tr${i === 0 ? ' class="dia-nuevo"' : ''}>
+                <td class="col-med">${i === 0 ? fechaLarga(f) : ''}</td>
+                <td class="col-med"><span class="pill" style="--c:${colorSector(u.sector)}">${escapar(u.sector || '—')}</span></td>
+                <td>${escapar(u.texto || '')}</td>
+                <td class="col-med">${escapar(u.operario || '—')}</td>
+              </tr>`).join('')).join('')}
+          </tbody>
+        </table>` : '<p class="planilla-vacia">Todavía no hay novedades cargadas.</p>'}
+    </section>`;
+
+  $('#dlgParte').showModal();
+}
+
+document.querySelectorAll('[data-imprimir]').forEach(b => b.onclick = () => window.print());
+
 /* ---------- Interacción de la tabla ---------- */
 
 $('#tbody').addEventListener('click', ev => {
   const editar = ev.target.closest('[data-editar]');
   if (editar) { abrirVehiculo(editar.dataset.editar); return; }
+
+  const rep = ev.target.closest('[data-repuestos]');
+  if (rep) { abrirRepuestos(rep.dataset.repuestos); return; }
+
+  const parte = ev.target.closest('[data-parte]');
+  if (parte) { abrirParte(parte.dataset.parte); return; }
 
   const fila = ev.target.closest('tr.fila');
   if (!fila) return;

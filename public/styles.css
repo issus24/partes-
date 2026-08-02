@@ -241,7 +241,31 @@ body {
 .c-nov  { width: var(--ancho-nov, 30%); }
 .c-est  { width: 210px; }
 .c-ing  { width: 175px; }
+.c-acc  { width: 130px; }
 .c-fill { width: auto; padding: 0 !important; }
+
+/* Botones de ficha */
+.c-acc { text-align: center; }
+.btn-ficha {
+  display: block;
+  width: 100%;
+  margin-bottom: 5px;
+  padding: 6px 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--txt-dim);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .3px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color .12s, color .12s;
+}
+.btn-ficha:last-child { margin-bottom: 0; }
+.btn-ficha:hover { border-color: var(--accent); color: var(--accent); }
+.btn-ficha b { color: #e0a92a; }
 
 thead th {
   position: sticky;
@@ -542,9 +566,119 @@ tr.fila-cerrada td { height: 94px; }
 .dlg-actions { display: flex; align-items: center; gap: 8px; margin-top: 18px; }
 .spacer { flex: 1; }
 
+/* ---------- Planillas (repuestos y parte de trabajo) ---------- */
+.dlg-ancho { width: 940px; max-height: 88vh; display: flex; flex-direction: column; }
+
+.dlg-cab {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--line);
+  flex: 0 0 auto;
+}
+.dlg-cab h2 { margin: 0 0 8px; }
+.dlg-cab .dlg-meta { display: flex; align-items: center; gap: 12px; margin: 0; flex-wrap: wrap; }
+.dlg-cab .patente { font-size: 15px; }
+.meta-txt { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dlg-cab-acc { display: flex; gap: 8px; flex: 0 0 auto; }
+
+.planilla-wrap { overflow-y: auto; padding: 16px 20px 22px; flex: 1 1 auto; }
+
+.planilla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.planilla th {
+  text-align: left;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--line);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .7px;
+  text-transform: uppercase;
+  color: var(--txt-dim);
+}
+.planilla td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: top;
+  line-height: 1.4;
+}
+.planilla tbody tr:hover td { background: rgba(255,255,255,.03); }
+.planilla .col-num { width: 60px; text-align: center; font-family: "Consolas", monospace; font-weight: 700; }
+.planilla .col-med { width: 150px; }
+.planilla tr.dia-nuevo td { border-top: 1px solid var(--line); }
+.planilla tr.dia-nuevo td:first-child { font-weight: 600; }
+
+.sub-nota { display: block; font-size: 11.5px; color: var(--txt-dim); margin-top: 2px; }
+
+.pill {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 100px;
+  border: 1px solid var(--c);
+  color: var(--c);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.planilla-vacia { color: var(--txt-dim); font-style: italic; margin: 4px 0 0; }
+
+.parte-bloque { margin-bottom: 24px; }
+.parte-bloque:last-child { margin-bottom: 0; }
+.parte-bloque h3 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  color: var(--txt-dim);
+}
+.parte-bloque .cuenta {
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  padding: 1px 8px;
+  font-size: 11px;
+  letter-spacing: 0;
+  color: var(--txt);
+}
+
+.parte-problemas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.parte-problemas li { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+
 /* ---------- Impresión ---------- */
 @media print {
   body { background: #fff; color: #000; overflow: visible; }
+
+  /* Con una planilla abierta se imprime solo esa, no el tablero de atrás. */
+  body:has(dialog[open]) > *:not(dialog) { display: none !important; }
+  dialog[open] {
+    position: static;
+    display: block;
+    width: auto;
+    max-width: 100%;
+    max-height: none;
+    border: 0;
+    box-shadow: none;
+    background: #fff;
+    color: #000;
+  }
+  dialog::backdrop { display: none; }
+  .dlg-cab-acc { display: none !important; }
+  .planilla-wrap { overflow: visible; }
+  .planilla th, .planilla td { border-color: #999 !important; color: #000 !important; }
+  .planilla tbody tr:hover td { background: none !important; }
+  .pill { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .topbar, .filtros, .menu-panel, .vacio, .dia-extra, .btn-nav, .btn-add-upd { display: none !important; }
   .dia-nav { background: none; border-bottom: 2px solid #000; }
   #diaTitulo { color: #000; }

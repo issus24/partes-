@@ -89,6 +89,7 @@
           <th class="c-nov">Novedades <span id="novDia" class="th-dia"></span></th>
           <th class="c-est">Estado</th>
           <th class="c-ing">Ingreso</th>
+          <th class="c-acc">Fichas</th>
           <th class="c-fill"></th>
         </tr>
       </thead>
@@ -160,6 +161,36 @@
         <button type="submit" class="btn btn-primary">Guardar</button>
       </footer>
     </form>
+  </dialog>
+
+  <!-- Planilla: repuestos solicitados -->
+  <dialog id="dlgRepuestos" class="dlg dlg-ancho">
+    <header class="dlg-cab">
+      <div>
+        <h2>Repuestos solicitados</h2>
+        <p class="dlg-meta" id="repMeta"></p>
+      </div>
+      <div class="dlg-cab-acc">
+        <button type="button" class="btn" data-imprimir>Imprimir</button>
+        <button type="button" class="btn" data-cerrar>Cerrar</button>
+      </div>
+    </header>
+    <div class="planilla-wrap" id="cuerpoRepuestos"></div>
+  </dialog>
+
+  <!-- Planilla: parte de trabajo de una unidad -->
+  <dialog id="dlgParte" class="dlg dlg-ancho">
+    <header class="dlg-cab">
+      <div>
+        <h2>Parte de trabajo</h2>
+        <p class="dlg-meta" id="parteMeta"></p>
+      </div>
+      <div class="dlg-cab-acc">
+        <button type="button" class="btn" data-imprimir>Imprimir</button>
+        <button type="button" class="btn" data-cerrar>Cerrar</button>
+      </div>
+    </header>
+    <div class="planilla-wrap" id="cuerpoParte"></div>
   </dialog>
 
   <input type="file" id="fileImport" accept="application/json" hidden>
