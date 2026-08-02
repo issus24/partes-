@@ -228,7 +228,7 @@ body {
 
 /* Anchos: las novedades se quedan con todo el resto de la pantalla. */
 .c-pat  { width: 210px; }
-.c-prob { width: 26%; }
+.c-prob { width: var(--ancho-prob, 26%); }
 .c-nov  { width: auto; }
 .c-est  { width: 210px; }
 .c-ing  { width: 130px; }
@@ -286,26 +286,34 @@ tr.fila td.c-pat { border-left: 4px solid var(--est); }
 
 .nada { color: #5f6b7d; font-size: 12px; font-style: italic; }
 
-/* Problemas */
+/* Problemas: una línea por problema, con la inicial de la especialidad */
 .prob {
-  display: block;
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
   border: 1px solid var(--line);
-  border-left: 3px solid var(--cat, var(--line));
   border-radius: 5px;
-  padding: 4px 8px;
+  padding: 4px 8px 4px 4px;
   margin-bottom: 4px;
   background: rgba(0,0,0,.22);
 }
 .prob:last-child { margin-bottom: 0; }
-.prob-etiqueta {
-  display: block;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: .7px;
-  text-transform: uppercase;
-  color: var(--cat, var(--txt-dim));
+
+.prob-ini {
+  flex: 0 0 auto;
+  width: 19px;
+  height: 19px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  background: var(--cat);
+  color: #101010;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: help;
 }
-.prob-txt { display: block; font-size: 12.5px; line-height: 1.3; }
+.prob-txt { flex: 1; font-size: 12.5px; line-height: 1.45; min-width: 0; }
 
 /* Novedades del día */
 .novedades { display: flex; flex-direction: column; gap: 5px; }

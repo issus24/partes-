@@ -15,6 +15,7 @@
   align-items: stretch;
   font-size: 16px;                 /* base; cada pantalla la ajusta */
   line-height: 1;
+  min-width: 7.4em;                /* mismo ancho para 6 y 7 caracteres */
   background: #f2f2ef;
   border: .13em solid #0b0b0b;
   border-radius: .3em;

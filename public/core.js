@@ -57,7 +57,7 @@ const pedidosAbiertos = v => (v.pedidos || []).filter(p => !PEDIDO_CERRADO.inclu
    Para afinarla, agregá términos a "claves" — no hace falta tocar nada más.
    ------------------------------------------------------------------ */
 const CATEGORIAS = [
-  { id: 'mecanico', label: 'Mecánico', color: '#e8825c', claves: [
+  { id: 'mecanico', label: 'Mecánico', inicial: 'M', color: '#e8825c', claves: [
     // motor
     'motor', 'aceite', 'humo', 'hume', 'culata', 'junta', 'correa', 'distribucion',
     'bujia', 'inyector', 'inyeccion', 'arranc', 'ralenti', 'biela', 'ciguenal',
@@ -78,21 +78,21 @@ const CATEGORIAS = [
     'aire acondicionado', 'climatiza', 'calefaccion', 'calefactor', 'compresor',
     'ventilacion', 'forzador', 'perdida', 'pierde', 'ruido', 'vibra'] },
 
-  { id: 'electrico', label: 'Eléctrico', color: '#e0c23a', claves: [
+  { id: 'electrico', label: 'Eléctrico', inicial: 'E', color: '#e0c23a', claves: [
     'electric', 'luz', 'luce', 'foco', 'faro', 'bateria', 'alternador', 'cable',
     'fusible', 'tablero', 'testigo', 'sensor', 'alarma', 'cerradura', 'bocina',
     'levantavidrio', 'limpiaparabrisas', 'baliza', 'giro', 'stop', 'burro',
     'corriente', 'no enciende', 'quemad', 'instalacion', 'rele', 'llave de luces',
     'tacografo', 'gps'] },
 
-  { id: 'herreria', label: 'Herrería', color: '#4d9de0', claves: [
+  { id: 'herreria', label: 'Herrería', inicial: 'H', color: '#4d9de0', claves: [
     'chapa', 'soldadura', 'soldar', 'rajad', 'fisura', 'quebrad', 'rotur',
     'estructura', 'chasis', 'baranda', 'caja de carga', 'guardabarro', 'paragolpe',
     'enganche', 'perno', 'soporte', 'travesaño', 'travesano', 'larguero', 'abolladura',
     'golpe', 'puerta', 'capot', 'oxido', 'pintura', 'refuerzo', 'bisagra', 'porton',
     'escalera', 'tanque'] },
 
-  { id: 'gomeria', label: 'Gomería', color: '#59c39a', claves: [
+  { id: 'gomeria', label: 'Gomería', inicial: 'G', color: '#59c39a', claves: [
     'neumatico', 'cubierta', 'goma', 'rueda', 'llanta', 'presion', 'pinchad',
     'auxilio', 'tuerca', 'valvula', 'camara', 'balanceo', 'desgaste', 'gomeria'] },
 ];
@@ -417,24 +417,23 @@ function textoBuscable(v) {
 /* Se guardan sin separadores; el formato es cosa de la pantalla. */
 const normalizarPatente = p => String(p || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 
-const RE_VIEJA = /^[A-Z]{3}[0-9]{3}$/;        // ABC 123
-const RE_MERCOSUR = /^[A-Z]{2}[0-9]{3}[A-Z]{2}$/;  // AB 123 CD
-
-/* ABC123  → "ABC 123"      (6 caracteres, formato anterior)
-   AB123CD → "AB 123 CD"    (7 caracteres, Mercosur)
-   Cualquier otra cosa se muestra tal cual se cargó. */
-function formatearPatente(p) {
-  const s = normalizarPatente(p);
-  if (RE_VIEJA.test(s)) return `${s.slice(0, 3)} ${s.slice(3)}`;
-  if (RE_MERCOSUR.test(s)) return `${s.slice(0, 2)} ${s.slice(2, 5)} ${s.slice(5)}`;
-  return s;
+/* El formato sale de la CANTIDAD de caracteres, no del patrón exacto:
+   6 → chapa anterior (ABC 123) · 7 → Mercosur (AB 123 CD).
+   Cualquier otro largo se muestra sin agrupar y sin banda de país. */
+function tipoPatente(p) {
+  const n = normalizarPatente(p).length;
+  if (n === 7) return 'mercosur';
+  if (n === 6) return 'vieja';
+  return 'otra';
 }
 
-function tipoPatente(p) {
+function formatearPatente(p) {
   const s = normalizarPatente(p);
-  if (RE_MERCOSUR.test(s)) return 'mercosur';
-  if (RE_VIEJA.test(s)) return 'vieja';
-  return 'otra';
+  switch (tipoPatente(s)) {
+    case 'vieja':    return `${s.slice(0, 3)} ${s.slice(3)}`;
+    case 'mercosur': return `${s.slice(0, 2)} ${s.slice(2, 5)} ${s.slice(5)}`;
+    default:         return s;
+  }
 }
 
 /* Chapa dibujada. El tamaño lo define el font-size del contenedor. */

@@ -69,7 +69,7 @@ function render() {
           ? (v.problemas).map(p => {
               const c = categoriaPorId(p.categoria);
               return `<span class="prob" style="--cat:${c.color}">
-                        <span class="prob-etiqueta">${escapar(c.label)}</span>
+                        <span class="prob-ini" title="${escapar(c.label)}">${c.inicial}</span>
                         <span class="prob-txt">${escapar(p.texto)}</span>
                       </span>`;
             }).join('')
@@ -103,6 +103,12 @@ function render() {
 
     tbody.appendChild(tr);
   }
+
+  // La columna de problemas se ajusta al texto más largo que haya en pantalla.
+  const masLargo = lista.reduce((max, v) =>
+    (v.problemas || []).reduce((m, p) => Math.max(m, p.texto.length), max), 0);
+  const ancho = Math.min(560, Math.max(200, Math.round(masLargo * 7.1) + 62));
+  document.querySelector('.parte').style.setProperty('--ancho-prob', ancho + 'px');
 
   // --- Auxiliares ---
   $('#contador').textContent = `${lista.length} de ${datos.vehiculos.length} vehículo${datos.vehiculos.length === 1 ? '' : 's'}`;
