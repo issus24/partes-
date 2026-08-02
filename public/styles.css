@@ -784,6 +784,7 @@ tr.fila-cerrada td { height: 94px; }
 .tabla-reporte .r-sal  { width: 92px; }
 
 td.r-pat, td.r-est, td.r-ing, td.r-sal { text-align: center; }
+td.r-est { vertical-align: middle; }   /* la píldora queda centrada en la fila */
 td.r-pat {
   font-family: "Consolas", monospace;
   font-weight: 700;
