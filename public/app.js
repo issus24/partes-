@@ -329,6 +329,10 @@ function abrirVehiculo(id = null) {
   const v = id ? vehiculoPorId(id) : null;
   $('#dlgVehiculoTitulo').textContent = v ? 'Editar vehículo' : 'Nuevo vehículo';
   $('#vPatente').value = v ? formatearPatente(v.patente) : '';
+  $('#vMarca').value = v?.marca || '';
+  $('#vModelo').value = v?.modelo || '';
+  $('#vChasis').value = v?.chasis || '';
+  $('#vMotor').value = v?.motor || '';
   $('#vIngreso').value = v?.ingreso || hoyISO();
   $('#vEstado').value = v?.estado || ESTADO_DEFECTO;
 
@@ -348,6 +352,10 @@ $('#formVehiculo').addEventListener('submit', () => {
   if (!patente) return;
   const campos = {
     patente,
+    marca: enMinuscula($('#vMarca').value),
+    modelo: enMinuscula($('#vModelo').value),
+    chasis: enCodigo($('#vChasis').value),
+    motor: enCodigo($('#vMotor').value),
     ingreso: $('#vIngreso').value,
     problemas: leerProblemas(),
     pedidos: leerPedidos(),
@@ -441,39 +449,87 @@ $('#btnBorrarUpdate').addEventListener('click', () => {
 
 /* ---------- Planilla de repuestos ---------- */
 
+/* Encabezado común de las dos fichas: título, patente y fecha. */
+function encabezadoDoc(v, titulo) {
+  return `
+    <h1 class="doc-titulo">${titulo}</h1>
+    <header class="doc-id">
+      ${patenteHTML(v.patente)}
+      <div class="doc-fecha">
+        <span class="doc-fecha-lbl">Fecha</span>
+        <span class="doc-fecha-val">${fechaLarga(hoyISO())}</span>
+      </div>
+    </header>`;
+}
+
+/* Datos técnicos. Se dibujan siempre, aunque falte cargarlos: el hueco
+   deja ver qué falta y sirve para completar a mano sobre el papel. */
+function tecnicosHTML(v) {
+  const dato = (lbl, val, mono) => `
+    <div class="doc-tec">
+      <span class="doc-dato-lbl">${lbl}</span>
+      <span class="doc-tec-val${mono ? ' mono' : ''}">${val ? escapar(val) : '—'}</span>
+    </div>`;
+  return `<div class="doc-tecnicos">
+    ${dato('Marca', v.marca)}
+    ${dato('Modelo', v.modelo)}
+    ${dato('N° de chasis', v.chasis, true)}
+    ${dato('N° de motor', v.motor, true)}
+  </div>`;
+}
+
 function abrirRepuestos(id) {
   const v = vehiculoPorId(id);
   if (!v) return;
   const peds = v.pedidos || [];
   const abiertos = pedidosAbiertos(v).length;
+  const total = peds.reduce((n, p) => n + (Number(p.cantidad) || 1), 0);
 
-  $('#repMeta').innerHTML = `${patenteHTML(v.patente)}
-    <span class="meta-txt">${peds.length} pedido${peds.length === 1 ? '' : 's'} · ${abiertos} sin cerrar</span>`;
+  $('#cuerpoRepuestos').innerHTML = `
+    <article class="doc">
+      ${encabezadoDoc(v, 'Repuestos solicitados')}
 
-  $('#cuerpoRepuestos').innerHTML = peds.length ? `
-    <table class="planilla">
-      <thead>
-        <tr>
-          <th class="col-num">Cant.</th>
-          <th>Artículo</th>
-          <th class="col-med">Estado</th>
-          <th class="col-med">Solicitó</th>
-          <th class="col-med">Fecha</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${peds.map(p => {
-          const e = pedidoEstadoPorId(p.estado);
-          return `<tr>
-            <td class="col-num">${p.cantidad || 1}</td>
-            <td>${escapar(p.descripcion)}${p.nota ? `<span class="sub-nota">${escapar(p.nota)}</span>` : ''}</td>
-            <td class="col-med"><span class="pill" style="--c:${e.color}">${e.label}</span></td>
-            <td class="col-med">${escapar(p.solicitante || '—')}</td>
-            <td class="col-med">${p.fecha ? fechaCorta(p.fecha) : '—'}</td>
-          </tr>`;
-        }).join('')}
-      </tbody>
-    </table>` : '<p class="planilla-vacia">Esta unidad no tiene repuestos solicitados.</p>';
+      <section class="doc-seccion">
+        <h2>Datos técnicos</h2>
+        ${tecnicosHTML(v)}
+      </section>
+
+      <section class="doc-seccion">
+        <h2>Repuestos</h2>
+        ${peds.length ? `
+          <table class="planilla">
+            <thead>
+              <tr>
+                <th class="col-num">Cant.</th>
+                <th>Artículo</th>
+                <th class="col-med">Estado</th>
+                <th class="col-med">Solicitó</th>
+                <th class="col-chico">Pedido</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${peds.map(p => {
+                const e = pedidoEstadoPorId(p.estado);
+                return `<tr>
+                  <td class="col-num">${p.cantidad || 1}</td>
+                  <td>${escapar(p.descripcion)}${p.nota ? `<span class="sub-nota">${escapar(p.nota)}</span>` : ''}</td>
+                  <td class="col-med"><span class="pill" style="--c:${e.color}">${e.label}</span></td>
+                  <td class="col-med">${escapar(p.solicitante || '—')}</td>
+                  <td class="col-chico">${p.fecha ? fechaCorta(p.fecha) : '—'}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td class="col-num">${total}</td>
+                <td colspan="4">
+                  ${peds.length} artículo${peds.length === 1 ? '' : 's'} · ${abiertos} sin cerrar
+                </td>
+              </tr>
+            </tfoot>
+          </table>` : '<p class="planilla-vacia">Esta unidad no tiene repuestos solicitados.</p>'}
+      </section>
+    </article>`;
 
   $('#dlgRepuestos').showModal();
 }
@@ -499,15 +555,12 @@ function abrirParte(id) {
 
   $('#cuerpoParte').innerHTML = `
     <article class="doc">
-      <h1 class="doc-titulo">Parte de trabajo</h1>
+      ${encabezadoDoc(v, 'Parte de trabajo')}
 
-      <header class="doc-id">
-        ${patenteHTML(v.patente)}
-        <div class="doc-fecha">
-          <span class="doc-fecha-lbl">Fecha</span>
-          <span class="doc-fecha-val">${fechaLarga(hoyISO())}</span>
-        </div>
-      </header>
+      <section class="doc-seccion">
+        <h2>Datos técnicos</h2>
+        ${tecnicosHTML(v)}
+      </section>
 
       <section class="doc-seccion">
         <h2>Problemas de ingreso</h2>

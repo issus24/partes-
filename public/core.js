@@ -467,7 +467,7 @@ const ultimaFechaUpdate = v => fechasConUpdates(v)[0] || null;
 /* Texto sobre el que buscar un vehículo. */
 function textoBuscable(v) {
   return [
-    v.patente,
+    v.patente, v.marca, v.modelo, v.chasis, v.motor,
     ...(v.problemas || []).map(p => `${p.texto} ${categoriaPorId(p.categoria).label}`),
     ...(v.pedidos || []).map(p => p.descripcion),
     ...Object.values(v.updates || {}).flat().map(u => `${u.sector} ${u.texto}`),
@@ -522,6 +522,11 @@ function patenteHTML(p) {
    patentes conservan sus mayúsculas. */
 function enMinuscula(s) {
   return String(s ?? '').trim().toLowerCase();
+}
+
+/* Números de chasis y motor: son códigos, van en mayúscula y sin espacios. */
+function enCodigo(s) {
+  return String(s ?? '').toUpperCase().replace(/\s+/g, '');
 }
 
 function escapar(s) {

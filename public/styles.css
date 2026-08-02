@@ -543,6 +543,8 @@ tr.fila-cerrada td { height: 94px; }
 }
 .campo input:focus, .campo select:focus, .campo textarea:focus { outline: none; border-color: var(--accent); }
 #vPatente { font-family: "Consolas", monospace; font-size: 17px; font-weight: 700; letter-spacing: 2px; }
+.campo input.mono { font-family: "Consolas", monospace; letter-spacing: 1px; text-transform: uppercase; }
+.campo-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
 .hint { color: #5f6b7d; font-weight: 400; }
 
 /* Filas de problemas y pedidos dentro del modal */
@@ -657,6 +659,15 @@ tr.fila-cerrada td { height: 94px; }
 
 .planilla-vacia { color: var(--txt-dim); font-style: italic; margin: 4px 0 0; }
 
+.planilla tfoot td {
+  border-top: 2px solid var(--line);
+  border-bottom: 0;
+  font-weight: 700;
+  color: var(--txt-dim);
+  font-size: 12px;
+}
+.planilla tfoot .col-num { color: var(--txt); font-size: 14px; }
+
 /* ---------- Documento: parte de trabajo ---------- */
 .dlg-cab-suelta { border-bottom: 0; padding-bottom: 0; justify-content: flex-end; }
 
@@ -729,6 +740,26 @@ tr.fila-cerrada td { height: 94px; }
   text-transform: uppercase;
   color: var(--txt-dim);
 }
+
+/* Datos técnicos del vehículo */
+.doc-tecnicos {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px 20px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, .2);
+}
+.doc-tec { min-width: 0; }
+.doc-tec-val {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.doc-tec-val.mono { font-family: "Consolas", monospace; font-size: 13.5px; letter-spacing: .5px; }
+.doc-tec-val:empty::after { content: "—"; color: var(--txt-dim); }
 
 /* Cierre: ingreso, días y sello */
 .doc-cierre {
@@ -823,6 +854,19 @@ tr.fila-cerrada td { height: 94px; }
   .planilla td { padding: 2.6mm 2.5mm; }
   .sub-nota { font-size: 9pt; }
   .pill { font-size: 8pt; padding: .5mm 2mm; }
+
+  .doc-tecnicos {
+    background: none !important;
+    border-color: #000 !important;
+    border-width: 1.5px;
+    border-radius: 3mm;
+    padding: 4mm 5mm;
+    gap: 4mm 6mm;
+  }
+  .doc-tec-val { font-size: 12pt; }
+  .doc-tec-val.mono { font-size: 11pt; }
+
+  .planilla tfoot td { border-top-color: #000 !important; color: #000 !important; font-size: 9.5pt; }
 
   .doc-cierre { padding: 5mm 6mm; border-width: 1.5px; border-radius: 3mm; }
   .doc-datos { gap: 16mm; }

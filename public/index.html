@@ -109,6 +109,25 @@
         <label for="vPatente">Patente * <span class="hint">— ABC123 o AB123CD</span></label>
         <input id="vPatente" name="patente" required maxlength="12" placeholder="AB 123 CD" autocomplete="off">
       </div>
+      <div class="campo-grid">
+        <div class="campo">
+          <label for="vMarca">Marca</label>
+          <input id="vMarca" placeholder="Ford" autocomplete="off">
+        </div>
+        <div class="campo">
+          <label for="vModelo">Modelo</label>
+          <input id="vModelo" placeholder="Ranger 3.2" autocomplete="off">
+        </div>
+        <div class="campo">
+          <label for="vChasis">N° de chasis</label>
+          <input id="vChasis" class="mono" placeholder="8AFER5..." autocomplete="off">
+        </div>
+        <div class="campo">
+          <label for="vMotor">N° de motor</label>
+          <input id="vMotor" class="mono" placeholder="PJ4A12..." autocomplete="off">
+        </div>
+      </div>
+
       <div class="campo">
         <label for="vIngreso">Fecha de ingreso</label>
         <input id="vIngreso" name="ingreso" type="date">
@@ -165,11 +184,7 @@
 
   <!-- Planilla: repuestos solicitados -->
   <dialog id="dlgRepuestos" class="dlg dlg-ancho">
-    <header class="dlg-cab">
-      <div>
-        <h2>Repuestos solicitados</h2>
-        <p class="dlg-meta" id="repMeta"></p>
-      </div>
+    <header class="dlg-cab dlg-cab-suelta">
       <div class="dlg-cab-acc">
         <button type="button" class="btn" data-imprimir>Imprimir</button>
         <button type="button" class="btn" data-cerrar>Cerrar</button>
