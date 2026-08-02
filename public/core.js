@@ -439,13 +439,26 @@ function formatearPatente(p) {
 /* Chapa dibujada. El tamaño lo define el font-size del contenedor. */
 function patenteHTML(p) {
   const tipo = tipoPatente(p);
-  const banda = tipo === 'mercosur' ? 'REPÚBLICA ARGENTINA'
-              : tipo === 'vieja' ? 'ARGENTINA'
-              : '';
-  return `<span class="patente pat-${tipo}">` +
-    (banda ? `<span class="pat-banda">${banda}</span>` : '') +
-    `<span class="pat-num">${escapar(formatearPatente(p))}</span></span>`;
+  const num = `<span class="pat-num">${escapar(formatearPatente(p))}</span>`;
+
+  if (tipo === 'mercosur') {
+    return `<span class="patente pat-mercosur">
+      <span class="pat-banda">
+        <span class="pat-merco">MERCOSUR</span>
+        <span class="pat-pais">REPÚBLICA ARGENTINA</span>
+        <span class="pat-bandera"></span>
+      </span>${num}</span>`;
+  }
+  if (tipo === 'vieja') {
+    return `<span class="patente pat-vieja"><span class="pat-banda">ARGENTINA</span>${num}</span>`;
+  }
+  return `<span class="patente pat-otra">${num}</span>`;
 }
+
+/* Todo lo que se escribe a mano se guarda en minúscula: ocupa menos y el
+   tablero queda parejo. Lo predefinido —estados, categorías— y las
+   patentes conservan sus mayúsculas. */
+const enMinuscula = s => String(s ?? '').trim().toLowerCase();
 
 function escapar(s) {
   return String(s ?? '').replace(/[&<>"']/g, c =>

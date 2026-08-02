@@ -44,8 +44,39 @@
   padding: .16em .34em .2em;
 }
 
-/* Mercosur: banda azul con letras blancas, cuerpo claro y letras negras. */
-.pat-mercosur .pat-banda { background: #0a2c8c; color: #fff; }
+/* Mercosur: banda azul con "MERCOSUR" a la izquierda, el país centrado
+   y la bandera a la derecha. Cuerpo claro con letras negras. */
+.pat-mercosur .pat-banda {
+  display: flex;
+  align-items: center;
+  gap: .4em;
+  background: linear-gradient(180deg, #0d3aa8, #072577);
+  color: #fff;
+  padding: .22em .3em .2em;
+}
+.pat-merco {
+  flex: 0 0 auto;
+  font-size: .58em;
+  font-weight: 600;
+  letter-spacing: .04em;
+  opacity: .85;
+}
+.pat-pais {
+  flex: 1;
+  text-align: center;
+  font-size: 1.05em;
+  font-weight: 700;
+  letter-spacing: .1em;
+}
+.pat-bandera {
+  flex: 0 0 auto;
+  width: 1.5em;
+  height: 1em;
+  border-radius: .1em;
+  border: .06em solid rgba(255, 255, 255, .5);
+  background: linear-gradient(180deg,
+    #74acdf 0 33.3%, #fff 33.3% 66.6%, #74acdf 66.6% 100%);
+}
 
 /* Anterior: marco blanco, "ARGENTINA" en celeste y cuerpo negro con
    letras blancas. */

@@ -226,12 +226,14 @@ body {
   table-layout: fixed;
 }
 
-/* Anchos: las novedades se quedan con todo el resto de la pantalla. */
+/* Anchos: problemas y novedades se calculan en app.js; la última columna
+   queda vacía y absorbe el espacio sobrante. */
 .c-pat  { width: 210px; }
 .c-prob { width: var(--ancho-prob, 26%); }
-.c-nov  { width: auto; }
+.c-nov  { width: var(--ancho-nov, 30%); }
 .c-est  { width: 210px; }
 .c-ing  { width: 130px; }
+.c-fill { width: auto; padding: 0 !important; }
 
 thead th {
   position: sticky;

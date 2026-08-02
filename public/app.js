@@ -99,21 +99,43 @@ function render() {
       <td class="c-ing">
         ${v.ingreso ? `<span class="ing-fecha">${fechaCorta(v.ingreso)}/${v.ingreso.slice(2, 4)}</span>` : '<span class="nada">—</span>'}
         ${dias !== null ? `<span class="ing-dias ${dias >= 15 ? 'alerta' : ''}">${dias} día${dias === 1 ? '' : 's'}</span>` : ''}
-      </td>`;
+      </td>
+
+      <td class="c-fill"></td>`;
 
     tbody.appendChild(tr);
   }
 
-  // La columna de problemas se ajusta al texto más largo que haya en pantalla.
-  const masLargo = lista.reduce((max, v) =>
-    (v.problemas || []).reduce((m, p) => Math.max(m, p.texto.length), max), 0);
-  const ancho = Math.min(560, Math.max(200, Math.round(masLargo * 7.1) + 62));
-  document.querySelector('.parte').style.setProperty('--ancho-prob', ancho + 'px');
+  ajustarAnchos(lista);
 
   // --- Auxiliares ---
   $('#contador').textContent = `${lista.length} de ${datos.vehiculos.length} vehículo${datos.vehiculos.length === 1 ? '' : 's'}`;
   $('#vacio').classList.toggle('hidden', datos.vehiculos.length > 0);
 }
+
+/* Anchos calculados:
+   · Problemas   → lo que necesite el texto más largo en pantalla.
+   · Novedades   → la mitad del espacio que sobra (el resto queda libre,
+                   absorbido por la columna vacía del final).
+   El resto de las columnas tiene ancho fijo en el CSS. */
+const ANCHO_PAT = 210, ANCHO_EST = 210, ANCHO_ING = 130;
+
+function ajustarAnchos(lista) {
+  const masLargo = lista.reduce((max, v) =>
+    (v.problemas || []).reduce((m, p) => Math.max(m, p.texto.length), max), 0);
+  const prob = Math.min(560, Math.max(200, Math.round(masLargo * 7.1) + 62));
+
+  const total = document.querySelector('.tabla-wrap').clientWidth;
+  const sobra = total - (ANCHO_PAT + prob + ANCHO_EST + ANCHO_ING);
+  const nov = Math.max(240, Math.round(sobra * 0.5));
+
+  const tabla = document.querySelector('.parte');
+  tabla.style.setProperty('--ancho-prob', prob + 'px');
+  tabla.style.setProperty('--ancho-nov', nov + 'px');
+}
+
+/* Al cambiar el tamaño de la ventana se recalculan. */
+addEventListener('resize', () => ajustarAnchos(vehiculosFiltrados()));
 
 /* "lunes 2 de agosto de 2026" */
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
@@ -216,7 +238,7 @@ function agregarFilaProblema(p) {
 function leerProblemas() {
   return [...$('#listaProblemas').children]
     .map(f => ({
-      texto: f.querySelector('.prob-texto').value.trim(),
+      texto: enMinuscula(f.querySelector('.prob-texto').value),
       categoria: f.querySelector('.prob-cat').value,
       manual: !!f.dataset.manual,
     }))
@@ -262,7 +284,7 @@ function agregarFilaPedido(p) {
 function leerPedidos() {
   return [...$('#listaPedidos').children]
     .map(f => ({
-      descripcion: f.querySelector('.ped-desc').value.trim(),
+      descripcion: enMinuscula(f.querySelector('.ped-desc').value),
       cantidad: Number(f.querySelector('.ped-cant').value) || 1,
       estado: f.querySelector('.ped-estado').value,
       fecha: f.dataset.fecha,
@@ -355,9 +377,9 @@ $('#formUpdate').addEventListener('submit', () => {
   if (!v) return;
 
   const u = {
-    sector: $('#uSector').value.trim(),
-    texto: $('#uTexto').value.trim(),
-    operario: $('#uOperario').value.trim(),
+    sector: enMinuscula($('#uSector').value),
+    texto: enMinuscula($('#uTexto').value),
+    operario: enMinuscula($('#uOperario').value),
   };
 
   v.updates ||= {};

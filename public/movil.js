@@ -198,9 +198,9 @@ $('#formUpd').addEventListener('submit', ev => {
   if (!v || !updEditando) return;
 
   const u = {
-    sector: $('#hSector').value.trim(),
-    texto: $('#hTexto').value.trim(),
-    operario: $('#hOperario').value.trim(),
+    sector: enMinuscula($('#hSector').value),
+    texto: enMinuscula($('#hTexto').value),
+    operario: enMinuscula($('#hOperario').value),
   };
   const fechaNueva = $('#hFecha').value || hoyISO();
   const { fecha, idx } = updEditando;
@@ -265,7 +265,7 @@ $('#pLista').addEventListener('click', ev => {
 
 /* Pasa lo escrito a la lista y deja los campos listos para el siguiente. */
 function sumarArticulo() {
-  const descripcion = $('#pDescripcion').value.trim();
+  const descripcion = enMinuscula($('#pDescripcion').value);
   if (!descripcion) { $('#pDescripcion').focus(); return false; }
   borrador.push({ descripcion, cantidad: Number($('#pCantidad').value) || 1 });
   $('#pDescripcion').value = '';
@@ -307,7 +307,7 @@ $('#formPedido').addEventListener('submit', ev => {
   const v = vehiculoPorId(vehiculoAbierto);
   if (!v) return;
 
-  const descripcion = $('#pDescripcion').value.trim();
+  const descripcion = enMinuscula($('#pDescripcion').value);
   v.pedidos ||= [];
 
   if (pedidoEditando !== null) {
