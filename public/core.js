@@ -252,6 +252,7 @@ async function sincronizar() {
     guardarCache();
     marcarConexion(true);
     alRefrescar();
+    subirMigrados();
 
     if (!usuario) {
       const ry = await fetch('/api/yo', { credentials: 'same-origin' });
@@ -262,6 +263,20 @@ async function sincronizar() {
     console.warn('Sin conexión con el servidor, se trabaja con la copia local:', e.message);
     marcarConexion(false);
   }
+}
+
+/* Si la migración normalizó textos, se devuelven al servidor para que
+   todos los dispositivos vean lo mismo. Corre una sola vez: la próxima
+   lectura ya viene normalizada y no marca nada. */
+async function subirMigrados() {
+  if (!migrados.size) return;
+  const ids = [...migrados];
+  migrados.clear();
+  for (const id of ids) {
+    const v = vehiculoPorId(id);
+    if (v) await enviar('PUT', `/api/vehiculos/${v.id}`, v);
+  }
+  console.info(`[migración] ${ids.length} vehículo(s) normalizados a minúscula.`);
 }
 
 function irALogin() {
@@ -354,12 +369,24 @@ async function vaciarCola() {
 /* Cantidad de cambios que todavía no llegaron al servidor. */
 const cambiosPendientes = () => leerCola().length;
 
+/* Vehículos que la migración modificó y conviene volver a subir. */
+const migrados = new Set();
+
 /* Adapta datos de versiones anteriores para que nada quede huérfano. */
 function migrar(d) {
   const valido = id => ESTADOS.some(e => e.id === id);
   const traducir = id => {
     const n = ESTADOS_VIEJOS[id] || id;
     return valido(n) ? n : '';
+  };
+
+  /* Pasa un campo de texto a minúscula avisando si cambió. */
+  const bajar = (obj, campo, v) => {
+    if (typeof obj?.[campo] !== 'string') return;
+    const nuevo = enMinuscula(obj[campo]);
+    if (nuevo === obj[campo]) return;
+    obj[campo] = nuevo;
+    migrados.add(v.id);
   };
 
   for (const v of d.vehiculos) {
@@ -374,16 +401,28 @@ function migrar(d) {
     for (const p of v.problemas) {
       p.categoria = CATEGORIAS_VIEJAS[p.categoria] || p.categoria;
       if (!CATEGORIAS.some(c => c.id === p.categoria)) p.categoria = detectarCategoria(p.texto);
+      bajar(p, 'texto', v);
     }
 
     v.pedidos ||= [];
+    for (const p of v.pedidos) {
+      bajar(p, 'descripcion', v);
+      bajar(p, 'solicitante', v);
+      bajar(p, 'nota', v);
+    }
 
     v.updates ||= {};
     for (const f of Object.keys(v.updates)) {
       let lista = v.updates[f];
       if (!Array.isArray(lista)) lista = [lista];
       lista = lista.filter(u => u && (u.texto || u.operario || u.sector));
-      for (const u of lista) { delete u.estado; delete u.horas; }
+      for (const u of lista) {
+        delete u.estado;
+        delete u.horas;
+        bajar(u, 'texto', v);
+        bajar(u, 'sector', v);
+        bajar(u, 'operario', v);
+      }
       if (lista.length) v.updates[f] = lista;
       else delete v.updates[f];
     }
@@ -458,7 +497,9 @@ function patenteHTML(p) {
 /* Todo lo que se escribe a mano se guarda en minúscula: ocupa menos y el
    tablero queda parejo. Lo predefinido —estados, categorías— y las
    patentes conservan sus mayúsculas. */
-const enMinuscula = s => String(s ?? '').trim().toLowerCase();
+function enMinuscula(s) {
+  return String(s ?? '').trim().toLowerCase();
+}
 
 function escapar(s) {
   return String(s ?? '').replace(/[&<>"']/g, c =>
