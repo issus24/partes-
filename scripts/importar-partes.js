@@ -91,7 +91,6 @@ const CAMPOS = [
   ['id',            /^(id|fecha|n[º°]|column 1)$/,            0],
   ['patente',       /^(patente|unidad)$/,                     1],
   ['detalle',       /^(detalle|novedades)$/,                  2],
-  ['responsable',   /^responsable$/,                          3],
   ['observaciones', /^observaci/,                             5],
   ['estado',        /^estado$/,                               6],
   ['negligencia',   /^(negl\.?|negligencia)$/,                7],
@@ -273,7 +272,6 @@ function leerParte(archivo) {
       fecha,
       patente,
       detalle: celda(fila, col.detalle),
-      responsable: celda(fila, col.responsable),
       observaciones: celda(fila, col.observaciones),
       estado,
       // Un estado que no está en el catálogo casi siempre es una
@@ -423,18 +421,19 @@ function sumarProblema(e, { texto, categoria }) {
 
 /* Las observaciones también se arrastran de un día al otro, y con dos
    filas por unidad el arrastre alterna entre dos textos. Se anota cada
-   texto una sola vez por estadía, el día que apareció. */
+   texto una sola vez por estadía, el día que apareció.
+
+   El operario va vacío a propósito. La columna Responsable de la planilla
+   trae nombres, pero son de quien firmó el parte, no necesariamente de
+   quien hizo el trabajo: ponerlos ahí seria atribuirle a alguien una
+   reparación que capaz no tocó. Se carga a mano desde la app. */
 function sumarUpdates(e, dia) {
   e._vistos ||= new Set();
   for (const u of dia.updates) {
     const texto = enMinuscula(u.texto);
     if (!texto || e._vistos.has(texto)) continue;
     e._vistos.add(texto);
-    (e.updates[dia.fecha] ||= []).push({
-      sector: 'taller',
-      texto,
-      operario: enMinuscula(u.operario),
-    });
+    (e.updates[dia.fecha] ||= []).push({ sector: 'taller', texto, operario: '' });
   }
 }
 
@@ -464,7 +463,7 @@ function agruparPorDia(items) {
 
     if (it.detalle) d.problemas.push({ texto: it.detalle, categoria: it.categoriaSector });
     for (const texto of [it.observaciones, it.estadoRaro]) {
-      if (texto) d.updates.push({ texto, operario: it.responsable });
+      if (texto) d.updates.push({ texto });
     }
   }
 
