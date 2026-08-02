@@ -47,24 +47,77 @@ const PEDIDO_CERRADO = ['recibido', 'rechazado'];
 const pedidoEstadoPorId = id => ESTADOS_PEDIDO.find(e => e.id === id) || ESTADOS_PEDIDO[0];
 
 /* Pedidos que todavía esperan algo de compras. */
-const pedidosAbiertos = v => (v.pedidos || []).filter(p => !PEDIDO_CERRADO.includes(p.estado));
+const pedidosAbiertos = e => (e?.pedidos || []).filter(p => !PEDIDO_CERRADO.includes(p.estado));
 
-/* ---------- Ciclo de vida del vehículo ---------- */
+/* ==================================================================
+   Vehículos y estadías
+
+   El vehículo guarda lo que no cambia entre visitas: patente, marca,
+   modelo, chasis y motor. Cada paso por el taller es una ESTADÍA con su
+   ingreso, su salida, su estado, sus problemas, sus pedidos y sus
+   novedades.
+
+   Sin esto, una unidad que vuelve al mes siguiente pisaba los datos de
+   la visita anterior — y en el histórico del taller hay patentes con
+   diez ingresos en tres meses.
+   ================================================================== */
+
+function nuevaEstadia(ingreso = hoyISO()) {
+  return {
+    id: nuevoId(),
+    ingreso,
+    finalizado: null,
+    estado: ESTADO_DEFECTO,
+    problemas: [],
+    pedidos: [],
+    updates: {},
+  };
+}
+
+/* Estadías de la más reciente a la más vieja. */
+const estadiasDe = v => [...(v.estadias || [])].sort((a, b) => (b.ingreso || '').localeCompare(a.ingreso || ''));
+
+/* La que se muestra por defecto: la abierta, o la última que hubo. */
+function estadiaActual(v) {
+  const lista = estadiasDe(v);
+  return lista.find(e => !e.finalizado) || lista[0] || null;
+}
+
+/* La estadía que cubre un día concreto. Null si ese día la unidad no
+   estaba en el taller: así no aparece antes de su ingreso ni después
+   de su salida. */
+function estadiaEnFecha(v, iso) {
+  return (v.estadias || []).find(e =>
+    e.ingreso && e.ingreso <= iso && (!e.finalizado || iso <= e.finalizado)) || null;
+}
+
+/* ---------- Ciclo de vida de una estadía ---------- */
 
 /* Al pasar a operativo se registra la fecha y el conteo de días queda
    congelado. Si vuelve a cualquier otro estado, el reloj sigue corriendo. */
-function cambiarEstado(v, nuevo) {
-  v.estado = nuevo;
-  if (nuevo === 'operativo') v.finalizado ||= hoyISO();
-  else delete v.finalizado;
+function cambiarEstado(e, nuevo) {
+  if (!e) return;
+  e.estado = nuevo;
+  if (nuevo === 'operativo') e.finalizado ||= hoyISO();
+  else e.finalizado = null;
 }
 
-const estaFinalizado = v => v.estado === 'operativo' && !!v.finalizado;
+const estaFinalizado = e => e?.estado === 'operativo' && !!e.finalizado;
 
-/* Días en taller: hasta hoy, o hasta la fecha de finalización si ya cerró. */
-function diasEnTaller(v) {
-  if (!v.ingreso) return null;
-  return diffDias(v.ingreso, v.finalizado || hoyISO());
+/* Días en taller: hasta hoy, o hasta la salida si ya cerró.
+   Nunca negativo: una estadía con ingreso futuro cuenta cero. */
+function diasEnTaller(e) {
+  if (!e?.ingreso) return null;
+  return Math.max(0, diffDias(e.ingreso, e.finalizado || hoyISO()));
+}
+
+/* Suma de días de todas las visitas y cuántas fueron. */
+function resumenHistorico(v) {
+  const lista = v.estadias || [];
+  return {
+    visitas: lista.length,
+    dias: lista.reduce((n, e) => n + (diasEnTaller(e) || 0), 0),
+  };
 }
 
 /* ------------------------------------------------------------------
@@ -408,70 +461,96 @@ function migrar(d) {
   };
 
   for (const v of d.vehiculos) {
-    v.estado = traducir(v.estado) || ESTADO_DEFECTO;
-
-    // Los que ya estaban operativos antes de existir el sello no tienen
-    // fecha de cierre registrada: se les pone la de hoy.
-    if (v.estado === 'operativo' && !v.finalizado) { v.finalizado = hoyISO(); migrados.add(v.id); }
-    if (v.estado !== 'operativo' && v.finalizado) { delete v.finalizado; migrados.add(v.id); }
-
-    // Antes los problemas eran un texto libre: cada renglón pasa a ser un problema.
-    if (typeof v.problemas === 'string') {
-      v.problemas = v.problemas.split('\n').map(t => t.trim()).filter(Boolean)
-        .map(texto => ({ texto, categoria: detectarCategoria(texto), manual: false }));
+    // Antes la visita al taller vivía en el propio vehículo. Ahora es una
+    // estadía: lo que había pasa a ser la primera.
+    if (!Array.isArray(v.estadias)) {
+      v.estadias = [{
+        id: nuevoId(),
+        ingreso: v.ingreso || hoyISO(),
+        finalizado: v.finalizado || null,
+        estado: v.estado || ESTADO_DEFECTO,
+        problemas: v.problemas,
+        pedidos: v.pedidos,
+        updates: v.updates,
+      }];
+      migrados.add(v.id);
     }
-    v.problemas ||= [];
-    for (const p of v.problemas) {
-      p.categoria = CATEGORIAS_VIEJAS[p.categoria] || p.categoria;
-      if (!CATEGORIAS.some(c => c.id === p.categoria)) p.categoria = detectarCategoria(p.texto);
-      bajar(p, 'texto', v);
-    }
+    delete v.ingreso; delete v.finalizado; delete v.estado;
+    delete v.problemas; delete v.pedidos; delete v.updates;
 
-    v.pedidos ||= [];
-    for (const p of v.pedidos) {
-      bajar(p, 'descripcion', v);
-      bajar(p, 'solicitante', v);
-      bajar(p, 'nota', v);
-    }
+    for (const e of v.estadias) {
+      e.id ||= nuevoId();
+      e.ingreso ||= hoyISO();
+      e.estado = traducir(e.estado) || ESTADO_DEFECTO;
 
-    v.updates ||= {};
-    for (const f of Object.keys(v.updates)) {
-      let lista = v.updates[f];
-      if (!Array.isArray(lista)) lista = [lista];
-      lista = lista.filter(u => u && (u.texto || u.operario || u.sector));
-      for (const u of lista) {
-        delete u.estado;
-        delete u.horas;
-        bajar(u, 'texto', v);
-        bajar(u, 'sector', v);
-        bajar(u, 'operario', v);
+      // Los que ya estaban operativos antes de existir el sello no tienen
+      // fecha de cierre registrada: se les pone la del ingreso.
+      if (e.estado === 'operativo' && !e.finalizado) { e.finalizado = e.ingreso; migrados.add(v.id); }
+      if (e.estado !== 'operativo' && e.finalizado) { e.finalizado = null; migrados.add(v.id); }
+
+      // Antes los problemas eran un texto libre: cada renglón pasa a ser uno.
+      if (typeof e.problemas === 'string') {
+        e.problemas = e.problemas.split('\n').map(t => t.trim()).filter(Boolean)
+          .map(texto => ({ texto, categoria: detectarCategoria(texto), manual: false }));
       }
-      if (lista.length) v.updates[f] = lista;
-      else delete v.updates[f];
+      e.problemas ||= [];
+      for (const p of e.problemas) {
+        p.categoria = CATEGORIAS_VIEJAS[p.categoria] || p.categoria;
+        if (!CATEGORIAS.some(c => c.id === p.categoria)) p.categoria = detectarCategoria(p.texto);
+        bajar(p, 'texto', v);
+      }
+
+      e.pedidos ||= [];
+      for (const p of e.pedidos) {
+        bajar(p, 'descripcion', v);
+        bajar(p, 'solicitante', v);
+        bajar(p, 'nota', v);
+      }
+
+      e.updates ||= {};
+      for (const f of Object.keys(e.updates)) {
+        let lista = e.updates[f];
+        if (!Array.isArray(lista)) lista = [lista];
+        lista = lista.filter(u => u && (u.texto || u.operario || u.sector));
+        for (const u of lista) {
+          delete u.estado;
+          delete u.horas;
+          bajar(u, 'texto', v);
+          bajar(u, 'sector', v);
+          bajar(u, 'operario', v);
+        }
+        if (lista.length) e.updates[f] = lista;
+        else delete e.updates[f];
+      }
     }
   }
   return d;
 }
 
-const nuevoId = () => 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+/* Declaración, no const: migrar() la usa al cargar, antes de que se
+   evalúe el resto del archivo. */
+function nuevoId() {
+  return 'v' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
 
 /* ---------- Consultas ---------- */
 
 const vehiculoPorId = id => datos.vehiculos.find(v => v.id === id);
 
-/* Fechas con actualizaciones, de la más reciente a la más vieja. */
-const fechasConUpdates = v => Object.keys(v.updates || {}).sort().reverse();
+/* Fechas con novedades de una estadía, de la más reciente a la más vieja. */
+const fechasConUpdates = e => Object.keys(e?.updates || {}).sort().reverse();
 
-const ultimaFechaUpdate = v => fechasConUpdates(v)[0] || null;
+const ultimaFechaUpdate = e => fechasConUpdates(e)[0] || null;
 
-/* Texto sobre el que buscar un vehículo. */
+/* Texto sobre el que buscar un vehículo: incluye todas sus estadías. */
 function textoBuscable(v) {
-  return [
-    v.patente, v.marca, v.modelo, v.chasis, v.motor,
-    ...(v.problemas || []).map(p => `${p.texto} ${categoriaPorId(p.categoria).label}`),
-    ...(v.pedidos || []).map(p => p.descripcion),
-    ...Object.values(v.updates || {}).flat().map(u => `${u.sector} ${u.texto}`),
-  ].join(' ');
+  const partes = [v.patente, v.marca, v.modelo, v.chasis, v.motor];
+  for (const e of v.estadias || []) {
+    partes.push(...(e.problemas || []).map(p => `${p.texto} ${categoriaPorId(p.categoria).label}`));
+    partes.push(...(e.pedidos || []).map(p => p.descripcion));
+    partes.push(...Object.values(e.updates || {}).flat().map(u => `${u.sector} ${u.texto}`));
+  }
+  return partes.join(' ');
 }
 
 /* ---------- Patentes ---------- */

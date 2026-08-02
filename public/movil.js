@@ -26,13 +26,15 @@ function renderLista() {
   ul.innerHTML = '';
 
   for (const v of lista) {
-    const est = estadoPorId(v.estado);
-    const abiertos = pedidosAbiertos(v).length;
-    const ultima = ultimaFechaUpdate(v);
-    const nProb = (v.problemas || []).length;
+    const e = estadiaActual(v);
+    if (!e) continue;
+    const est = estadoPorId(e.estado);
+    const abiertos = pedidosAbiertos(e).length;
+    const ultima = ultimaFechaUpdate(e);
+    const nProb = (e.problemas || []).length;
 
-    const meta = estaFinalizado(v)
-      ? `finalizado el ${fechaCorta(v.finalizado)}`
+    const meta = estaFinalizado(e)
+      ? `finalizado el ${fechaCorta(e.finalizado)}`
       : [
           nProb ? `${nProb} problema${nProb === 1 ? '' : 's'}` : '',
           ultima ? `novedad ${fechaRelativa(ultima)}` : 'sin novedades',
@@ -89,27 +91,31 @@ function renderDetalle() {
   const v = vehiculoPorId(vehiculoAbierto);
   if (!v) return volverALista();
 
-  const dias = diasEnTaller(v);
+  const e = estadiaActual(v);
+  if (!e) return volverALista();
+  const dias = diasEnTaller(e);
+  const { visitas } = resumenHistorico(v);
   $('#dPatente').innerHTML = patenteHTML(v.patente);
-  $('#dSub').textContent = dias === null ? ''
-    : estaFinalizado(v)
-      ? `finalizado el ${fechaCorta(v.finalizado)} · ${dias} día${dias === 1 ? '' : 's'} en taller`
-      : `${dias} día${dias === 1 ? '' : 's'} en taller`;
+  $('#dSub').textContent = [
+    dias === null ? '' : `${dias} día${dias === 1 ? '' : 's'} en taller`,
+    estaFinalizado(e) ? `finalizado el ${fechaCorta(e.finalizado)}` : '',
+    visitas > 1 ? `visita ${visitas}` : '',
+  ].filter(Boolean).join(' · ');
 
   // --- Estado (tocar para cambiar) ---
   const cont = $('#dEstados');
   cont.innerHTML = '';
-  for (const e of ESTADOS) {
+  for (const o of ESTADOS) {
     const b = document.createElement('button');
-    b.className = 'm-est-btn' + (v.estado === e.id ? ' on' : '');
-    b.style.color = v.estado === e.id ? e.color : '';
-    b.innerHTML = `<span class="dot" style="background:${e.color}"></span>${e.label}`;
-    b.onclick = () => { cambiarEstado(v, e.id); guardarVehiculo(v); renderDetalle(); };
+    b.className = 'm-est-btn' + (e.estado === o.id ? ' on' : '');
+    b.style.color = e.estado === o.id ? o.color : '';
+    b.innerHTML = `<span class="dot" style="background:${o.color}"></span>${o.label}`;
+    b.onclick = () => { cambiarEstado(e, o.id); guardarVehiculo(v); renderDetalle(); };
     cont.appendChild(b);
   }
 
   // --- Problemas ---
-  const probs = v.problemas || [];
+  const probs = e.problemas || [];
   $('#dProblemas').innerHTML = probs.length
     ? probs.map(p => {
         const c = categoriaPorId(p.categoria);
@@ -121,17 +127,17 @@ function renderDetalle() {
     : '<p class="m-nada">Sin problemas cargados.</p>';
 
   // --- Pedidos ---
-  const peds = v.pedidos || [];
+  const peds = e.pedidos || [];
   $('#dPedidos').innerHTML = peds.length
     ? peds.map((p, i) => {
-        const e = pedidoEstadoPorId(p.estado);
-        return `<div class="m-pedido" style="--ped:${e.color}" data-ped="${i}">
+        const ep = pedidoEstadoPorId(p.estado);
+        return `<div class="m-pedido" style="--ped:${ep.color}" data-ped="${i}">
                   <div class="m-ped-top">
                     <span class="m-ped-cant">×${p.cantidad || 1}</span>
                     <span class="m-ped-desc">${escapar(p.descripcion)}</span>
                   </div>
                   <div class="m-ped-pie">
-                    <span class="m-ped-estado">${escapar(e.label)}</span>
+                    <span class="m-ped-estado">${escapar(ep.label)}</span>
                     ${p.urgente ? '<span class="m-urgente">URGENTE</span>' : ''}
                     <span>${escapar(p.solicitante || '')}${p.solicitante && p.fecha ? ' · ' : ''}${p.fecha ? fechaRelativa(p.fecha) : ''}</span>
                   </div>
@@ -140,12 +146,12 @@ function renderDetalle() {
     : '<p class="m-nada">Sin pedidos de repuestos.</p>';
 
   // --- Actualizaciones, de la más reciente a la más vieja ---
-  const fechas = fechasConUpdates(v);
+  const fechas = fechasConUpdates(e);
   $('#dUpdates').innerHTML = fechas.length
     ? fechas.map(f => `
         <div class="m-dia">
           <div class="m-dia-fecha"><b>${fechaLarga(f)}</b> · ${fechaRelativa(f)}</div>
-          ${v.updates[f].map((u, i) => `
+          ${e.updates[f].map((u, i) => `
             <div class="m-upd" style="--sec:${colorSector(u.sector)}" data-fecha="${f}" data-idx="${i}">
               ${u.sector ? `<div class="m-upd-sector">${escapar(u.sector)}</div>` : ''}
               <div class="m-upd-txt">${escapar(u.texto || '')}</div>
@@ -179,9 +185,10 @@ document.querySelectorAll('[data-cerrar-hoja]').forEach(el => el.onclick = cerra
 
 function abrirHojaUpd(fecha = null, idx = null) {
   const v = vehiculoPorId(vehiculoAbierto);
-  if (!v) return;
+  const e = v && estadiaActual(v);
+  if (!e) return;
   const f = fecha || hoyISO();
-  const u = idx === null ? {} : (v.updates?.[f]?.[idx] || {});
+  const u = idx === null ? {} : (e.updates?.[f]?.[idx] || {});
   updEditando = { fecha: f, idx };
 
   $('#hUpdTitulo').textContent = idx === null ? 'Nueva actualización' : 'Editar actualización';
@@ -200,7 +207,8 @@ $('#btnNuevaUpd').onclick = () => abrirHojaUpd();
 $('#formUpd').addEventListener('submit', ev => {
   ev.preventDefault();
   const v = vehiculoPorId(vehiculoAbierto);
-  if (!v || !updEditando) return;
+  const e = v && estadiaActual(v);
+  if (!e || !updEditando) return;
 
   const u = {
     sector: enMinuscula($('#hSector').value),
@@ -212,13 +220,13 @@ $('#formUpd').addEventListener('submit', ev => {
 
   if (!u.texto && !u.sector && !u.operario) { cerrarHojas(); return; }
 
-  v.updates ||= {};
+  e.updates ||= {};
   // Si se cambió la fecha, la actualización se muda de día.
   if (idx !== null) {
-    v.updates[fecha].splice(idx, 1);
-    if (!v.updates[fecha].length) delete v.updates[fecha];
+    e.updates[fecha].splice(idx, 1);
+    if (!e.updates[fecha].length) delete e.updates[fecha];
   }
-  (v.updates[fechaNueva] ||= []).push(u);
+  (e.updates[fechaNueva] ||= []).push(u);
 
   // Se recuerdan para no reescribirlos en cada carga.
   if (u.sector) localStorage.setItem('ultimoSector', u.sector);
@@ -231,11 +239,12 @@ $('#formUpd').addEventListener('submit', ev => {
 
 $('#btnBorrarUpd').onclick = () => {
   const v = vehiculoPorId(vehiculoAbierto);
+  const e = v && estadiaActual(v);
   const { fecha, idx } = updEditando || {};
-  if (!v || idx === null || idx === undefined) return;
+  if (!e || idx === null || idx === undefined) return;
   if (!confirm('¿Eliminar esta actualización?')) return;
-  v.updates[fecha].splice(idx, 1);
-  if (!v.updates[fecha].length) delete v.updates[fecha];
+  e.updates[fecha].splice(idx, 1);
+  if (!e.updates[fecha].length) delete e.updates[fecha];
   guardarVehiculo(v);
   cerrarHojas();
   renderDetalle();
@@ -284,9 +293,10 @@ $('#btnAgregarArticulo').onclick = sumarArticulo;
 
 function abrirHojaPedido(idx = null) {
   const v = vehiculoPorId(vehiculoAbierto);
-  if (!v) return;
+  const e = v && estadiaActual(v);
+  if (!e) return;
   pedidoEditando = idx;
-  const p = idx === null ? {} : (v.pedidos?.[idx] || {});
+  const p = idx === null ? {} : (e.pedidos?.[idx] || {});
   borrador = [];
   renderBorrador();
 
@@ -310,16 +320,17 @@ $('#btnNuevoPedido').onclick = () => abrirHojaPedido();
 $('#formPedido').addEventListener('submit', ev => {
   ev.preventDefault();
   const v = vehiculoPorId(vehiculoAbierto);
-  if (!v) return;
+  const e = v && estadiaActual(v);
+  if (!e) return;
 
   const descripcion = enMinuscula($('#pDescripcion').value);
-  v.pedidos ||= [];
+  e.pedidos ||= [];
 
   if (pedidoEditando !== null) {
     // Edición de un pedido existente: se conserva lo que puso compras.
     if (!descripcion) { cerrarHojas(); return; }
-    const anterior = v.pedidos[pedidoEditando] || {};
-    v.pedidos[pedidoEditando] = {
+    const anterior = e.pedidos[pedidoEditando] || {};
+    e.pedidos[pedidoEditando] = {
       ...anterior,
       descripcion,
       cantidad: Number($('#pCantidad').value) || 1,
@@ -334,7 +345,7 @@ $('#formPedido').addEventListener('submit', ev => {
       estado: PEDIDO_DEFECTO,
       fecha: hoyISO(),
     };
-    for (const a of borrador) v.pedidos.push({ ...base, ...a });
+    for (const a of borrador) e.pedidos.push({ ...base, ...a });
     borrador = [];
   }
 
@@ -345,9 +356,10 @@ $('#formPedido').addEventListener('submit', ev => {
 
 $('#btnBorrarPedido').onclick = () => {
   const v = vehiculoPorId(vehiculoAbierto);
-  if (!v || pedidoEditando === null) return;
+  const e = v && estadiaActual(v);
+  if (!e || pedidoEditando === null) return;
   if (!confirm('¿Eliminar este pedido?')) return;
-  v.pedidos.splice(pedidoEditando, 1);
+  e.pedidos.splice(pedidoEditando, 1);
   guardarVehiculo(v);
   cerrarHojas();
   renderDetalle();

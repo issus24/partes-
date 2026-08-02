@@ -18,25 +18,26 @@ const $ = sel => document.querySelector(sel);
 
 /* ---------- Render ---------- */
 
-function vehiculosFiltrados() {
+/* Devuelve pares { v, e }: el vehículo y la estadía que cubre el día que
+   se está viendo. Si ese día no estaba en el taller, no aparece. */
+function filasDelDia() {
   const q = vista.buscar.trim();
-  return datos.vehiculos.filter(v => {
-    // Terminada la reparación, la unidad figura hasta el día en que se
-    // cerró —ahí queda el sello— y desaparece del parte a partir del
-    // día siguiente. Hacia atrás se sigue viendo su historia.
-    if (v.finalizado && vista.fecha > v.finalizado) return false;
-
-    if (!vista.estadosVisibles.has(v.estado)) return false;
-    if (vista.ocultarTerminados && v.estado === 'operativo') return false;
-    if (!q) return true;
-    return normalizar(textoBuscable(v)).includes(normalizar(q));
-  });
+  const filas = [];
+  for (const v of datos.vehiculos) {
+    const e = estadiaEnFecha(v, vista.fecha);
+    if (!e) continue;
+    if (!vista.estadosVisibles.has(e.estado)) continue;
+    if (vista.ocultarTerminados && e.estado === 'operativo') continue;
+    if (q && !normalizar(textoBuscable(v)).includes(normalizar(q))) continue;
+    filas.push({ v, e });
+  }
+  return filas;
 }
 
 function render() {
   const f = vista.fecha;
   const hoy = hoyISO();
-  const lista = vehiculosFiltrados();
+  const lista = filasDelDia();
 
   // --- Encabezado del día ---
   $('#diaTitulo').textContent = fechaLargaCompleta(f);
@@ -50,12 +51,12 @@ function render() {
   const tbody = $('#tbody');
   tbody.innerHTML = '';
 
-  for (const v of lista) {
-    const est = estadoPorId(v.estado);
-    const dias = diasEnTaller(v);
-    const cerrado = estaFinalizado(v);
-    const updates = v.updates?.[f] || [];
-    const abiertos = pedidosAbiertos(v).length;
+  for (const { v, e } of lista) {
+    const est = estadoPorId(e.estado);
+    const dias = diasEnTaller(e);
+    const cerrado = estaFinalizado(e);
+    const updates = e.updates?.[f] || [];
+    const abiertos = pedidosAbiertos(e).length;
 
     const tr = document.createElement('tr');
     tr.className = 'fila' + (cerrado ? ' fila-cerrada' : '');
@@ -71,8 +72,8 @@ function render() {
       </td>
 
       <td class="c-prob">
-        ${(v.problemas || []).length
-          ? (v.problemas).map(p => {
+        ${(e.problemas || []).length
+          ? (e.problemas).map(p => {
               const c = categoriaPorId(p.categoria);
               return `<span class="prob" style="--cat:${c.color}">
                         <span class="prob-ini" title="${escapar(c.label)}">${c.inicial}</span>
@@ -98,14 +99,14 @@ function render() {
 
       <td class="c-est">
         <select class="sel-estado" data-estado="${v.id}" style="--est:${est.color}">
-          ${ESTADOS.map(e => `<option value="${e.id}"${e.id === v.estado ? ' selected' : ''}>${e.label}</option>`).join('')}
+          ${ESTADOS.map(o => `<option value="${o.id}"${o.id === e.estado ? ' selected' : ''}>${o.label}</option>`).join('')}
         </select>
       </td>
 
       <td class="c-ing">
-        ${v.ingreso ? `<span class="ing-fecha">${fechaCorta(v.ingreso)}/${v.ingreso.slice(2, 4)}</span>` : '<span class="nada">—</span>'}
+        ${e.ingreso ? `<span class="ing-fecha">${fechaCorta(e.ingreso)}/${e.ingreso.slice(2, 4)}</span>` : '<span class="nada">—</span>'}
         ${dias !== null ? `<span class="ing-dias ${cerrado ? 'cerrado' : dias >= 15 ? 'alerta' : ''}">${dias} día${dias === 1 ? '' : 's'}</span>` : ''}
-        ${cerrado ? selloHTML(v) : ''}
+        ${cerrado ? selloHTML(e) : ''}
       </td>
 
       <td class="c-acc">
@@ -125,7 +126,7 @@ function render() {
   ajustarAnchos(lista);
 
   // --- Auxiliares ---
-  $('#contador').textContent = `${lista.length} de ${datos.vehiculos.length} vehículo${datos.vehiculos.length === 1 ? '' : 's'}`;
+  $('#contador').textContent = `${lista.length} unidad${lista.length === 1 ? '' : 'es'} este día · ${datos.vehiculos.length} en total`;
   $('#vacio').classList.toggle('hidden', datos.vehiculos.length > 0);
 }
 
@@ -134,12 +135,12 @@ function render() {
    repetiría en cada redibujado. */
 const sellosEstampados = new Set();
 
-function selloHTML(v) {
-  const nuevo = !sellosEstampados.has(v.id);
-  sellosEstampados.add(v.id);
+function selloHTML(e) {
+  const nuevo = !sellosEstampados.has(e.id);
+  sellosEstampados.add(e.id);
   return `<span class="sello${nuevo ? ' estampando' : ''}">
             <span class="sello-txt">Finalizado</span>
-            <span class="sello-fecha">${fechaCorta(v.finalizado)}/${v.finalizado.slice(2, 4)}</span>
+            <span class="sello-fecha">${fechaCorta(e.finalizado)}/${e.finalizado.slice(2, 4)}</span>
           </span>`;
 }
 
@@ -151,8 +152,8 @@ function selloHTML(v) {
 const ANCHO_PAT = 210, ANCHO_EST = 210, ANCHO_ING = 175, ANCHO_ACC = 130;
 
 function ajustarAnchos(lista) {
-  const masLargo = lista.reduce((max, v) =>
-    (v.problemas || []).reduce((m, p) => Math.max(m, p.texto.length), max), 0);
+  const masLargo = lista.reduce((max, { e }) =>
+    (e.problemas || []).reduce((m, p) => Math.max(m, p.texto.length), max), 0);
   const prob = Math.min(560, Math.max(200, Math.round(masLargo * 7.1) + 62));
 
   const total = document.querySelector('.tabla-wrap').clientWidth;
@@ -165,7 +166,7 @@ function ajustarAnchos(lista) {
 }
 
 /* Al cambiar el tamaño de la ventana se recalculan. */
-addEventListener('resize', () => ajustarAnchos(vehiculosFiltrados()));
+addEventListener('resize', () => ajustarAnchos(filasDelDia()));
 
 /* "lunes 2 de agosto de 2026" */
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
@@ -332,20 +333,27 @@ $('#btnAddPedido').addEventListener('click', () => {
 function abrirVehiculo(id = null) {
   vehiculoEditando = id;
   const v = id ? vehiculoPorId(id) : null;
+  const e = v ? estadiaActual(v) : null;
+  const { visitas } = v ? resumenHistorico(v) : { visitas: 0 };
+
   $('#dlgVehiculoTitulo').textContent = v ? 'Editar vehículo' : 'Nuevo vehículo';
   $('#vPatente').value = v ? formatearPatente(v.patente) : '';
   $('#vMarca').value = v?.marca || '';
   $('#vModelo').value = v?.modelo || '';
   $('#vChasis').value = v?.chasis || '';
   $('#vMotor').value = v?.motor || '';
-  $('#vIngreso').value = v?.ingreso || hoyISO();
-  $('#vEstado').value = v?.estado || ESTADO_DEFECTO;
+  $('#vIngreso').value = e?.ingreso || hoyISO();
+  $('#vEstado').value = e?.estado || ESTADO_DEFECTO;
+
+  $('#estadiaInfo').textContent = visitas > 1
+    ? `Estadía ${visitas} de esta unidad` : '';
+  $('#btnNuevaEstadia').classList.toggle('hidden', !e || !e.finalizado);
 
   $('#listaProblemas').innerHTML = '';
-  (v?.problemas?.length ? v.problemas : [{}]).forEach(p => agregarFilaProblema(p));
+  (e?.problemas?.length ? e.problemas : [{}]).forEach(p => agregarFilaProblema(p));
 
   $('#listaPedidos').innerHTML = '';
-  (v?.pedidos || []).forEach(p => agregarFilaPedido(p));
+  (e?.pedidos || []).forEach(p => agregarFilaPedido(p));
 
   $('#btnBorrarVehiculo').classList.toggle('hidden', !v);
   $('#dlgVehiculo').showModal();
@@ -355,27 +363,41 @@ function abrirVehiculo(id = null) {
 $('#formVehiculo').addEventListener('submit', () => {
   const patente = normalizarPatente($('#vPatente').value);
   if (!patente) return;
-  const campos = {
+
+  let v = vehiculoEditando ? vehiculoPorId(vehiculoEditando) : null;
+  if (!v) {
+    v = { id: nuevoId(), estadias: [nuevaEstadia($('#vIngreso').value)] };
+    datos.vehiculos.push(v);
+  }
+
+  Object.assign(v, {
     patente,
     marca: enMinuscula($('#vMarca').value),
     modelo: enMinuscula($('#vModelo').value),
     chasis: enCodigo($('#vChasis').value),
     motor: enCodigo($('#vMotor').value),
-    ingreso: $('#vIngreso').value,
-    problemas: leerProblemas(),
-    pedidos: leerPedidos(),
-  };
+  });
 
-  let v;
-  if (vehiculoEditando) {
-    v = Object.assign(vehiculoPorId(vehiculoEditando), campos);
-  } else {
-    v = { id: nuevoId(), ...campos, estado: ESTADO_DEFECTO, updates: {} };
-    datos.vehiculos.push(v);
-  }
-  cambiarEstado(v, $('#vEstado').value);
+  const e = estadiaActual(v);
+  e.ingreso = $('#vIngreso').value || e.ingreso;
+  e.problemas = leerProblemas();
+  e.pedidos = leerPedidos();
+  cambiarEstado(e, $('#vEstado').value);
+
   guardarVehiculo(v);
   render();
+});
+
+/* Una unidad que vuelve al taller abre una estadía nueva: la anterior
+   queda archivada con sus problemas y sus novedades. */
+$('#btnNuevaEstadia').addEventListener('click', () => {
+  const v = vehiculoPorId(vehiculoEditando);
+  if (!v) return;
+  if (!confirm('¿Registrar un nuevo ingreso al taller?\n\nLa estadía anterior se archiva y podés consultarla desde el parte.')) return;
+  v.estadias.push(nuevaEstadia());
+  guardarVehiculo(v);
+  render();
+  abrirVehiculo(v.id);
 });
 
 $('#btnBorrarVehiculo').addEventListener('click', () => {
@@ -392,10 +414,11 @@ $('#btnBorrarVehiculo').addEventListener('click', () => {
 /* idx = null → nueva novedad; idx = número → editar la existente. */
 function abrirUpdate(vehiculoId, fecha, idx = null) {
   const v = vehiculoPorId(vehiculoId);
-  if (!v) return;
+  const e = v && estadiaEnFecha(v, fecha);
+  if (!e) return;
   celdaEditando = { vehiculoId, fecha, idx };
-  const u = idx === null ? {} : (v.updates?.[fecha]?.[idx] || {});
-  const cantidad = (v.updates?.[fecha] || []).length;
+  const u = idx === null ? {} : (e.updates?.[fecha]?.[idx] || {});
+  const cantidad = (e.updates?.[fecha] || []).length;
 
   $('#updTitulo').textContent = idx === null ? 'Nueva novedad' : 'Editar novedad';
   $('#updMeta').textContent = `${formatearPatente(v.patente)} — ${fechaLarga(fecha)}` +
@@ -412,7 +435,8 @@ $('#formUpdate').addEventListener('submit', () => {
   if (!celdaEditando) return;
   const { vehiculoId, fecha, idx } = celdaEditando;
   const v = vehiculoPorId(vehiculoId);
-  if (!v) return;
+  const e = v && estadiaEnFecha(v, fecha);
+  if (!e) return;
 
   const u = {
     sector: enMinuscula($('#uSector').value),
@@ -420,8 +444,8 @@ $('#formUpdate').addEventListener('submit', () => {
     operario: enMinuscula($('#uOperario').value),
   };
 
-  v.updates ||= {};
-  const lista = v.updates[fecha] || [];
+  e.updates ||= {};
+  const lista = e.updates[fecha] || [];
 
   if (!u.texto && !u.operario && !u.sector) {
     if (idx !== null) lista.splice(idx, 1);   // se vació: se elimina
@@ -431,8 +455,8 @@ $('#formUpdate').addEventListener('submit', () => {
     lista[idx] = u;
   }
 
-  if (lista.length) v.updates[fecha] = lista;
-  else delete v.updates[fecha];
+  if (lista.length) e.updates[fecha] = lista;
+  else delete e.updates[fecha];
 
   guardarVehiculo(v);
   render();
@@ -442,11 +466,12 @@ $('#btnBorrarUpdate').addEventListener('click', () => {
   const { vehiculoId, fecha, idx } = celdaEditando || {};
   if (idx === null || idx === undefined) return;
   const v = vehiculoPorId(vehiculoId);
-  const lista = v?.updates?.[fecha];
+  const e = v && estadiaEnFecha(v, fecha);
+  const lista = e?.updates?.[fecha];
   if (!lista) return;
   if (!confirm('¿Eliminar esta novedad?')) return;
   lista.splice(idx, 1);
-  if (!lista.length) delete v.updates[fecha];
+  if (!lista.length) delete e.updates[fecha];
   guardarVehiculo(v);
   render();
   $('#dlgUpdate').close();
@@ -499,9 +524,10 @@ function tecnicosHTML(v) {
 
 function abrirRepuestos(id) {
   const v = vehiculoPorId(id);
-  if (!v) return;
-  const peds = v.pedidos || [];
-  const abiertos = pedidosAbiertos(v).length;
+  const est = v && (estadiaEnFecha(v, vista.fecha) || estadiaActual(v));
+  if (!est) return;
+  const peds = est.pedidos || [];
+  const abiertos = pedidosAbiertos(est).length;
   const total = peds.reduce((n, p) => n + (Number(p.cantidad) || 1), 0);
 
   $('#cuerpoRepuestos').innerHTML = `
@@ -558,13 +584,15 @@ function abrirRepuestos(id) {
 
 function abrirParte(id) {
   const v = vehiculoPorId(id);
-  if (!v) return;
-  const dias = diasEnTaller(v);
-  const est = estadoPorId(v.estado);
-  const fechas = fechasConUpdates(v);
-  const peds = v.pedidos || [];
+  const e = v && (estadiaEnFecha(v, vista.fecha) || estadiaActual(v));
+  if (!e) return;
+  const dias = diasEnTaller(e);
+  const est = estadoPorId(e.estado);
+  const fechas = fechasConUpdates(e);
+  const peds = e.pedidos || [];
+  const anteriores = estadiasDe(v).filter(x => x.id !== e.id);
 
-  const problemas = (v.problemas || []).map(p => {
+  const problemas = (e.problemas || []).map(p => {
     const c = categoriaPorId(p.categoria);
     return `<li>
               <span class="prob-ini" style="--cat:${c.color}">${c.inicial}</span>
@@ -603,11 +631,11 @@ function abrirParte(id) {
             </thead>
             <tbody>
               ${peds.map(p => {
-                const e = pedidoEstadoPorId(p.estado);
+                const ep = pedidoEstadoPorId(p.estado);
                 return `<tr>
                   <td class="col-num">${p.cantidad || 1}</td>
                   <td>${escapar(p.descripcion)}${p.nota ? `<span class="sub-nota">${escapar(p.nota)}</span>` : ''}</td>
-                  <td class="col-med"><span class="pill" style="--c:${e.color}">${e.label}</span></td>
+                  <td class="col-med"><span class="pill" style="--c:${ep.color}">${ep.label}</span></td>
                   <td class="col-med">${escapar(p.solicitante || '—')}</td>
                   <td class="col-chico">${p.fecha ? fechaCorta(p.fecha) : '—'}</td>
                 </tr>`;
@@ -620,7 +648,7 @@ function abrirParte(id) {
         <div class="doc-datos">
           <div class="doc-dato">
             <span class="doc-dato-lbl">Fecha de ingreso</span>
-            <span class="doc-dato-val">${v.ingreso ? fechaLarga(v.ingreso) : '—'}</span>
+            <span class="doc-dato-val">${e.ingreso ? fechaLarga(e.ingreso) : '—'}</span>
           </div>
           <div class="doc-dato">
             <span class="doc-dato-lbl">Días en taller</span>
@@ -631,10 +659,10 @@ function abrirParte(id) {
             <span class="doc-dato-val"><span class="pill" style="--c:${est.color}">${est.label}</span></span>
           </div>
         </div>
-        ${estaFinalizado(v) ? `
+        ${estaFinalizado(e) ? `
           <span class="sello sello-doc">
             <span class="sello-txt">Finalizado</span>
-            <span class="sello-fecha">${fechaCorta(v.finalizado)}/${v.finalizado.slice(2, 4)}</span>
+            <span class="sello-fecha">${fechaCorta(e.finalizado)}/${e.finalizado.slice(2, 4)}</span>
           </span>` : ''}
       </section>
 
@@ -651,7 +679,7 @@ function abrirParte(id) {
               </tr>
             </thead>
             <tbody>
-              ${fechas.map(f => v.updates[f].map((u, i) => `
+              ${fechas.map(f => e.updates[f].map((u, i) => `
                 <tr${i === 0 ? ' class="dia-nuevo"' : ''}>
                   <td class="col-med">${i === 0 ? fechaLarga(f) : ''}</td>
                   <td class="col-med"><span class="pill" style="--c:${colorSector(u.sector)}">${escapar(u.sector || '—')}</span></td>
@@ -661,6 +689,30 @@ function abrirParte(id) {
             </tbody>
           </table>` : '<p class="planilla-vacia">Todavía no hay novedades cargadas.</p>'}
       </section>
+
+      ${anteriores.length ? `
+        <section class="doc-seccion">
+          <h2>Estadías anteriores</h2>
+          <table class="planilla">
+            <thead>
+              <tr>
+                <th class="col-med">Ingreso</th>
+                <th class="col-med">Salida</th>
+                <th class="col-chico">Días</th>
+                <th>Motivo de ingreso</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${anteriores.map(x => `
+                <tr>
+                  <td class="col-med">${fechaLarga(x.ingreso)}</td>
+                  <td class="col-med">${x.finalizado ? fechaLarga(x.finalizado) : '—'}</td>
+                  <td class="col-chico">${diasEnTaller(x) ?? '—'}</td>
+                  <td>${(x.problemas || []).map(p => escapar(p.texto)).join(' · ') || '—'}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </section>` : ''}
     </article>`;
 
   orientarHoja('vertical');
@@ -674,18 +726,18 @@ function abrirParte(id) {
    como en la pantalla. Entran muchas más unidades por hoja. */
 function abrirReporte() {
   const f = vista.fecha;
-  const lista = vehiculosFiltrados();
+  const lista = filasDelDia();
 
-  const filas = lista.map(v => {
-    const est = estadoPorId(v.estado);
-    const dias = diasEnTaller(v);
+  const filas = lista.map(({ v, e }) => {
+    const est = estadoPorId(e.estado);
+    const dias = diasEnTaller(e);
 
-    const problemas = (v.problemas || []).map(p => {
+    const problemas = (e.problemas || []).map(p => {
       const c = categoriaPorId(p.categoria);
       return `<span class="r-item"><b class="r-ini" style="--cat:${c.color}">${c.inicial}</b>${escapar(p.texto)}</span>`;
     }).join('<span class="r-sep">·</span>');
 
-    const novedades = (v.updates?.[f] || []).map(u =>
+    const novedades = (e.updates?.[f] || []).map(u =>
       `<span class="r-item">${u.sector ? `<b class="r-sector">${escapar(u.sector)}</b>` : ''}${escapar(u.texto || '')}${u.operario ? ` <i>(${escapar(u.operario)})</i>` : ''}</span>`
     ).join('<span class="r-sep">·</span>');
 
@@ -695,12 +747,12 @@ function abrirReporte() {
       <td>${novedades || '<span class="r-vacio">sin novedades</span>'}</td>
       <td class="r-est"><span class="pill" style="--c:${est.color}">${est.label}</span></td>
       <td class="r-ing">
-        <span class="r-ing-fecha">${v.ingreso ? fechaCorta(v.ingreso) : '—'}</span>
+        <span class="r-ing-fecha">${e.ingreso ? fechaCorta(e.ingreso) : '—'}</span>
         ${dias !== null ? `<span class="r-dias">${dias} d</span>` : ''}
       </td>
       <td class="r-sal">
-        ${estaFinalizado(v)
-          ? `<span class="r-ing-fecha r-salida">${fechaCorta(v.finalizado)}</span>`
+        ${estaFinalizado(e)
+          ? `<span class="r-ing-fecha r-salida">${fechaCorta(e.finalizado)}</span>`
           : '<span class="r-vacio">—</span>'}
       </td>
     </tr>`;
@@ -772,9 +824,10 @@ $('#tbody').addEventListener('change', ev => {
   const sel = ev.target.closest('[data-estado]');
   if (!sel) return;
   const v = vehiculoPorId(sel.dataset.estado);
-  if (!v) return;
-  if (v.estado !== 'operativo') sellosEstampados.delete(v.id);   // que vuelva a animarse
-  cambiarEstado(v, sel.value);
+  const e = v && estadiaEnFecha(v, vista.fecha);
+  if (!e) return;
+  if (e.estado !== 'operativo') sellosEstampados.delete(e.id);   // que vuelva a animarse
+  cambiarEstado(e, sel.value);
   guardarVehiculo(v);
   render();
 });

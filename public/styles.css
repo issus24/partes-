@@ -587,6 +587,16 @@ tr.fila-cerrada td { height: 94px; }
 
 .btn-mini { align-self: flex-start; margin-top: 7px; padding: 5px 10px; font-size: 12px; }
 
+.estadia-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--txt-dim);
+}
+.estadia-info .btn-mini { margin-top: 0; }
+
 .dlg-actions { display: flex; align-items: center; gap: 8px; margin-top: 18px; }
 .spacer { flex: 1; }
 
