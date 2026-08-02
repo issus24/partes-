@@ -486,7 +486,6 @@ function abrirParte(id) {
   const dias = diasEnTaller(v);
   const est = estadoPorId(v.estado);
   const fechas = fechasConUpdates(v);
-  const totalNov = fechas.reduce((n, f) => n + v.updates[f].length, 0);
   const peds = v.pedidos || [];
 
   const problemas = (v.problemas || []).map(p => {
@@ -567,7 +566,7 @@ function abrirParte(id) {
       </section>
 
       <section class="doc-seccion">
-        <h2>Novedades <span class="cuenta">${totalNov}</span></h2>
+        <h2>Novedades</h2>
         ${fechas.length ? `
           <table class="planilla">
             <thead>

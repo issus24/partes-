@@ -657,32 +657,6 @@ tr.fila-cerrada td { height: 94px; }
 
 .planilla-vacia { color: var(--txt-dim); font-style: italic; margin: 4px 0 0; }
 
-.parte-bloque { margin-bottom: 24px; }
-.parte-bloque:last-child { margin-bottom: 0; }
-.parte-bloque h3 {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  margin: 0 0 10px;
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: .8px;
-  text-transform: uppercase;
-  color: var(--txt-dim);
-}
-.parte-bloque .cuenta {
-  background: var(--panel-2);
-  border: 1px solid var(--line);
-  border-radius: 100px;
-  padding: 1px 8px;
-  font-size: 11px;
-  letter-spacing: 0;
-  color: var(--txt);
-}
-
-.parte-problemas { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
-.parte-problemas li { display: flex; align-items: center; gap: 8px; font-size: 13px; }
-
 /* ---------- Documento: parte de trabajo ---------- */
 .dlg-cab-suelta { border-bottom: 0; padding-bottom: 0; justify-content: flex-end; }
 
@@ -792,6 +766,8 @@ tr.fila-cerrada td { height: 94px; }
     width: auto;
     max-width: 100%;
     max-height: none;
+    margin: 0;          /* el navegador centra los <dialog> con margin auto */
+    padding: 0;
     border: 0;
     box-shadow: none;
     background: #fff;
@@ -799,6 +775,8 @@ tr.fila-cerrada td { height: 94px; }
   }
   dialog::backdrop { display: none; }
   .dlg-cab-acc { display: none !important; }
+  /* El encabezado del parte solo tiene botones: en papel no va nada. */
+  .dlg-cab-suelta { display: none !important; }
   .planilla-wrap { overflow: visible; }
   .planilla th, .planilla td { border-color: #999 !important; color: #000 !important; }
   .planilla tbody tr:hover td { background: none !important; }
@@ -815,7 +793,7 @@ tr.fila-cerrada td { height: 94px; }
   .planilla tr { break-inside: avoid; }
 
   /* ---- El parte, medido en unidades de papel ---- */
-  @page { size: A4 portrait; margin: 15mm 14mm; }
+  @page { size: A4 portrait; margin: 10mm 14mm 14mm; }
 
   .planilla-wrap { padding: 0; }
   .doc { max-width: none; font-size: 11pt; }
@@ -835,7 +813,6 @@ tr.fila-cerrada td { height: 94px; }
 
   .doc-seccion { margin-bottom: 8mm; }
   .doc-seccion > h2 { font-size: 10pt; letter-spacing: 1.6px; margin-bottom: 3mm; padding-bottom: 2mm; }
-  .doc-seccion .cuenta { border-color: #000; color: #000; }
 
   .doc-problemas li { font-size: 11.5pt; padding: 2.6mm 1mm; }
   .doc-prob-cat { font-size: 8pt; }
