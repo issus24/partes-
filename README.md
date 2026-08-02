@@ -61,6 +61,9 @@ basura por el tamaño del hueco de filas vacías, y reconstruye las estadías as
 - Si el F-I se carga con atraso (la unidad entra el 6 y el parte del 8 le pone
   "F-I 06/07"), se corrige el ingreso en lugar de abrir una visita nueva. Una
   fecha posterior sí abre una visita nueva.
+- Una estadía que quedó abierta y cuya unidad hace más de **14 días** que no
+  figura en ningún parte se cierra el último día que apareció: no siguió cuatro
+  meses en el taller, dejaron de cargarla. El umbral es `DIAS_PARA_DARLA_POR_IDA`.
 
 El informe termina con un control de que ninguna unidad quede dos veces en el
 taller el mismo día: si eso no da cero, la grilla mostraría la visita
