@@ -16,6 +16,8 @@ public/         cliente (se sirve tal cual, sin build)
 server/
   index.js      API REST + eventos en vivo (SSE) + estáticos
   db.js         Postgres, o archivo JSON si no hay DATABASE_URL
+scripts/
+  importar-partes.js   carga el histórico de los CSV del taller
 ```
 
 ## Correr en la PC
@@ -32,6 +34,37 @@ PIN por defecto: **1234** (oficina) y **5678** (taller). Cambialos antes de publ
 
 También se puede seguir usando sin servidor: abriendo `public/index.html` con doble clic,
 la app funciona igual pero guarda solo en ese navegador.
+
+## Importar el histórico
+
+Los partes diarios del taller viven en `partes_por_dia_2026/`, un CSV por día
+exportado de la planilla. Para volcarlos en la app:
+
+```bash
+npm run importar                                  # informe, no escribe nada
+node scripts/importar-partes.js --escribir        # vuelca en datos/datos.json
+node scripts/importar-partes.js --detalle IOK295  # audita una unidad
+```
+
+Se niega a pisar un `datos.json` que ya tenga vehículos; para reemplazarlo hay
+que agregar `--forzar`.
+
+Los CSV no son parejos: el encabezado cambió de nombre seis veces, trece
+archivos se exportaron sin nombres de columna, y cada hoja arrastra partes
+viejos pegados más abajo. El importador los resuelve por posición, corta la
+basura por el tamaño del hueco de filas vacías, y reconstruye las estadías así:
+
+- La **entrada** sale de la columna F-I. Antes del 18/6/26 esa columna no
+  existía, así que se toma el primer día en que la unidad figura en un parte.
+- La **salida** sale de F-T. Si está vacía, es el día en que el parte la dio
+  por operativa.
+- Si el F-I se carga con atraso (la unidad entra el 6 y el parte del 8 le pone
+  "F-I 06/07"), se corrige el ingreso en lugar de abrir una visita nueva. Una
+  fecha posterior sí abre una visita nueva.
+
+El informe termina con un control de que ninguna unidad quede dos veces en el
+taller el mismo día: si eso no da cero, la grilla mostraría la visita
+equivocada.
 
 ## Desplegar en Railway
 
