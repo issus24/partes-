@@ -771,7 +771,7 @@ tr.fila-cerrada td { height: 94px; }
 .tabla-reporte th, .tabla-reporte td { padding: 7px 9px; vertical-align: top; }
 .tabla-reporte .r-pat  { width: 108px; }
 .tabla-reporte .r-est  { width: 130px; }
-.tabla-reporte .r-ing  { width: 96px; }
+.tabla-reporte .r-ing  { width: 118px; }
 
 td.r-pat {
   font-family: "Consolas", monospace;
@@ -808,7 +808,22 @@ td.r-pat {
 .r-item i { color: var(--txt-dim); font-style: normal; font-size: 11px; }
 .r-vacio { color: var(--txt-dim); font-style: italic; }
 .r-dias { display: block; font-size: 11px; color: var(--txt-dim); }
-.r-fin { display: block; font-size: 10px; font-weight: 700; text-transform: uppercase; color: #2fae6b; }
+
+/* Sello chico, para que entre en la columna de ingreso del reporte */
+.sello-mini {
+  width: 62px;
+  height: 62px;
+  border-width: 2px;
+  margin: 5px 0 0;
+}
+.sello-mini::before { inset: 3px; border-width: 1px; }
+.sello-mini .sello-txt { font-size: 7.5px; letter-spacing: .2px; padding: 0 3px; }
+.sello-mini .sello-fecha {
+  font-size: 7.5px;
+  margin: 1px 5px 0;
+  padding-top: 1px;
+  border-top-width: 1px;
+}
 
 /* Cierre: ingreso, días y sello */
 .doc-cierre {
@@ -872,9 +887,9 @@ td.r-pat {
   .doc-seccion { break-inside: avoid-page; }
   .planilla tr { break-inside: avoid; }
 
-  /* ---- El parte, medido en unidades de papel ---- */
-  @page { size: A4 portrait; margin: 10mm 14mm 14mm; }
-
+  /* ---- El parte, medido en unidades de papel ----
+     La orientación de la hoja la fija app.js según qué ficha se imprime:
+     las reglas @page no se pueden condicionar desde CSS. */
   .planilla-wrap { padding: 0; }
   .doc { max-width: none; font-size: 11pt; }
 
@@ -918,8 +933,7 @@ td.r-pat {
   .planilla tfoot td { border-top-color: #000 !important; color: #000 !important; font-size: 9.5pt; }
 
   /* El reporte del día sale apaisado: son cinco columnas anchas. */
-  @page apaisado { size: A4 landscape; margin: 10mm; }
-  .doc-reporte { page: apaisado; font-size: 9.5pt; }
+  .doc-reporte { font-size: 9.5pt; }
   .doc-reporte .doc-titulo { font-size: 17pt; margin-bottom: 5mm; padding-bottom: 3mm; }
   .doc-reporte .doc-id { margin-bottom: 5mm; }
   .rep-dia-val { font-size: 13pt; }
@@ -931,7 +945,9 @@ td.r-pat {
   .r-ini { font-size: 7.5pt; }
   .r-sector { font-size: 7.5pt; }
   .r-item i, .r-dias { font-size: 8pt; }
-  .r-fin { font-size: 7.5pt; }
+  .sello-mini { width: 17mm; height: 17mm; border-width: 1.5px; margin-top: 1.5mm; }
+  .sello-mini .sello-txt { font-size: 6pt; }
+  .sello-mini .sello-fecha { font-size: 6pt; }
 
   .doc-cierre { padding: 5mm 6mm; border-width: 1.5px; border-radius: 3mm; }
   .doc-datos { gap: 16mm; }

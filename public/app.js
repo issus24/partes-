@@ -454,6 +454,20 @@ $('#btnBorrarUpdate').addEventListener('click', () => {
 
 /* ---------- Planilla de repuestos ---------- */
 
+/* ---------- Orientación de la hoja ----------
+   Una regla @page no se puede condicionar desde CSS, así que la escribe
+   el JS según qué ficha se está por imprimir. */
+const hojaEstilo = document.createElement('style');
+document.head.appendChild(hojaEstilo);
+
+function orientarHoja(modo) {
+  hojaEstilo.textContent = modo === 'apaisada'
+    ? '@page { size: A4 landscape; margin: 10mm; }'
+    : '@page { size: A4 portrait; margin: 10mm 14mm 14mm; }';
+}
+
+orientarHoja('vertical');
+
 /* Encabezado común de las dos fichas: título, patente y fecha. */
 function encabezadoDoc(v, titulo) {
   return `
@@ -536,6 +550,7 @@ function abrirRepuestos(id) {
       </section>
     </article>`;
 
+  orientarHoja('vertical');
   $('#dlgRepuestos').showModal();
 }
 
@@ -648,6 +663,7 @@ function abrirParte(id) {
       </section>
     </article>`;
 
+  orientarHoja('vertical');
   $('#dlgParte').showModal();
 }
 
@@ -681,7 +697,11 @@ function abrirReporte() {
       <td class="r-ing">
         ${v.ingreso ? fechaCorta(v.ingreso) : '—'}
         ${dias !== null ? `<span class="r-dias">${dias} d</span>` : ''}
-        ${estaFinalizado(v) ? '<span class="r-fin">finalizado</span>' : ''}
+        ${estaFinalizado(v) ? `
+          <span class="sello sello-mini">
+            <span class="sello-txt">Finalizado</span>
+            <span class="sello-fecha">${fechaCorta(v.finalizado)}</span>
+          </span>` : ''}
       </td>
     </tr>`;
   }).join('');
@@ -717,6 +737,7 @@ function abrirReporte() {
       : '<p class="planilla-vacia">No hay unidades para este día con los filtros aplicados.</p>'}
     </article>`;
 
+  orientarHoja('apaisada');
   $('#dlgReporte').showModal();
 }
 
