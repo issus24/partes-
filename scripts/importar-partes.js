@@ -321,24 +321,57 @@ function conPiso(estadias, propuesto) {
   return propuesto < piso ? piso : propuesto;
 }
 
+/* Cuántos días puede faltar una unidad del parte sin que se considere que
+   se fue. El parte se saltea domingos y algún feriado, así que hasta tres
+   días siguen siendo partes consecutivos: eso es un olvido de carga. Más
+   que eso es una salida — la repararon, se fue, y si vuelve a figurar es
+   porque volvió a fallar y entró de nuevo. */
+const DIAS_SIN_FIGURAR = 3;
+
 function armarEstadias(dias) {
   const estadias = [];
   let abierta = null;
+  let ultimoVisto = null;
 
   for (const dia of dias) {
     const declarado = dia.ingreso;
 
-    /* Una unidad que ya se fue y sigue figurando OPERATIVO en los partes
-       de los días siguientes no volvió a entrar: es la misma salida
-       arrastrada en la planilla. Sin esta guarda cada día de arrastre
-       abriría una estadía de un día. */
+    const desdeQueNoFigura = ultimoVisto ? diffDias(ultimoVisto, dia.fecha) : Infinity;
+
+    /* Dejó de figurar varios días y volvió. No siguió en el taller todo
+       ese tiempo: la repararon, se fue, y si vuelve a aparecer es porque
+       volvió a fallar y entró de nuevo. La visita se cierra el último día
+       que figuró y la de hoy es otra.
+
+       Sin esto la estadía tapa el hueco entero y la grilla muestra la
+       unidad en el taller días en que el parte no la nombró: en mayo el
+       parte listaba 35 unidades y la app mostraba 63. */
+    if (abierta && desdeQueNoFigura > DIAS_SIN_FIGURAR) {
+      cerrar(abierta, ultimoVisto);
+      abierta = null;
+    }
+    ultimoVisto = dia.fecha;
+
+    /* Una unidad que ya se dio por operativa y sigue figurando así al día
+       siguiente no volvió a entrar: la oficina deja la fila unos días más
+       para que se vea que se terminó. No es una visita nueva.
+
+       Pero tampoco se puede ignorar el día: si se saltea, la unidad
+       desaparece de la grilla mientras el parte la sigue mostrando, y la
+       novedad de ese día se pierde — NMG568 figura operativa el 1/8 con
+       "guardó en Volta y se quedó sin luces" al lado. Así que se estira
+       el cierre de la visita que ya está: una sola visita, y la grilla
+       muestra lo mismo que el papel. */
     if (!abierta && dia.estado === 'operativo') {
       const ultima = estadias[estadias.length - 1];
-      const mismaVisita = ultima && (
-        (declarado && declarado === ultima.ingreso) ||
-        (!declarado && ultima.finalizado)
-      );
-      if (mismaVisita) continue;
+      const arrastre = ultima && desdeQueNoFigura <= DIAS_SIN_FIGURAR
+        && (!declarado || declarado === ultima.ingreso);
+      if (arrastre) {
+        ultima.finalizado = dia.salida && dia.salida > dia.fecha ? dia.salida : dia.fecha;
+        ultima.ultimoDia = dia.fecha;
+        sumarUpdates(ultima, dia);
+        continue;
+      }
     }
 
     /* La fecha de ingreso aparece con días de atraso: la unidad entra el
@@ -392,8 +425,14 @@ function armarEstadias(dias) {
     for (const p of dia.problemas) sumarProblema(abierta, p);
     sumarUpdates(abierta, dia);
 
-    if (dia.salida) { cerrar(abierta, dia.salida); abierta = null; }
-    else if (dia.estado === 'operativo') { cerrar(abierta, dia.fecha); abierta = null; }
+    /* Manda el estado, no el F-T. En once filas los dos se contradicen:
+       CQD623 arrastra "F-T 31/07" desde el 27 de julio mientras el parte
+       la sigue listando PENDIENTE y reparándole la instalación eléctrica.
+       Esa fecha es la salida prevista, no la real — el 1/8 la unidad
+       seguía en el taller. Solo se cierra cuando el parte la da por
+       operativa, o cuando trae fecha de salida y ningún estado. */
+    if (dia.estado === 'operativo') { cerrar(abierta, dia.salida || dia.fecha); abierta = null; }
+    else if (dia.salida && !dia.estado) { cerrar(abierta, dia.salida); abierta = null; }
   }
 
   return estadias;
@@ -404,26 +443,23 @@ function armarEstadias(dias) {
 
    Una unidad que se fue del taller y a la que nunca le marcaron
    OPERATIVO queda abierta para siempre, y la app le cuenta los días
-   hasta hoy: había unas cuantas con 129 días. No siguieron cuatro meses
-   en el taller, dejaron de cargarlas.
+   hasta hoy: había estadías con 129 días. No siguieron cuatro meses
+   adentro, dejaron de cargarlas.
 
-   Se dan por cerradas el último día que figuraron. El umbral es
-   deliberadamente holgado: el parte se saltea domingos y feriados, y una
-   unidad puede faltar unos días por un olvido de carga y seguir en el
-   taller. Recién cuando pasan dos semanas sin figurar no hay forma de
-   sostener que sigue adentro.
+   El último parte es el cierre real: lo que figura ahí es lo que estaba
+   en el taller ese día, y lo que no figura ya se había ido. Así que toda
+   estadía que siga abierta y no aparezca en el último parte se cierra el
+   día que figuró por última vez.
 
    Quedan como operativas porque el modelo no da otra: finalizado y
    operativo van juntos. Es una inferencia nuestra, no algo que diga el
    parte.
    ------------------------------------------------------------------ */
 
-const DIAS_PARA_DARLA_POR_IDA = 14;
-
 function cerrarLasColgadas(estadias, ultimoParte) {
   let n = 0;
   for (const e of estadias) {
-    if (e.finalizado || diffDias(e.ultimoDia, ultimoParte) <= DIAS_PARA_DARLA_POR_IDA) continue;
+    if (e.finalizado || e.ultimoDia === ultimoParte) continue;
     cerrar(e, e.ultimoDia);
     n++;
   }
@@ -450,20 +486,22 @@ function sumarProblema(e, { texto, categoria }) {
   });
 }
 
-/* Las observaciones también se arrastran de un día al otro, y con dos
-   filas por unidad el arrastre alterna entre dos textos. Se anota cada
-   texto una sola vez por estadía, el día que apareció.
+/* La observación de cada fila entra como novedad del día en que el parte
+   la dice. Se repite mientras el parte la siga arrastrando, y está bien
+   que se repita: la grilla muestra un día por vez, y abrir el sábado
+   tiene que mostrar lo que el parte del sábado decía — no mandar a
+   buscarlo al día en que se escribió por primera vez.
 
    El operario va vacío a propósito. La columna Responsable de la planilla
    trae nombres, pero son de quien firmó el parte, no necesariamente de
-   quien hizo el trabajo: ponerlos ahí seria atribuirle a alguien una
+   quien hizo el trabajo: ponerlos ahí sería atribuirle a alguien una
    reparación que capaz no tocó. Se carga a mano desde la app. */
 function sumarUpdates(e, dia) {
-  e._vistos ||= new Set();
+  const delDia = new Set();
   for (const u of dia.updates) {
     const texto = enMinuscula(u.texto);
-    if (!texto || e._vistos.has(texto)) continue;
-    e._vistos.add(texto);
+    if (!texto || delDia.has(texto)) continue;    // dos filas de la misma unidad con el mismo texto
+    delDia.add(texto);
     (e.updates[dia.fecha] ||= []).push({ sector: 'taller', texto, operario: '' });
   }
 }
@@ -514,9 +552,12 @@ function importar() {
   const estadosRaros = new Map();
   let filasLeidas = 0;
 
+  const partePorDia = new Map();
+
   for (const archivo of archivos) {
     const parte = leerParte(archivo);
     filasLeidas += parte.items.length;
+    partePorDia.set(parte.fecha, new Set(parte.items.map(i => i.patente)));
 
     for (const r of parte.rechazos) rechazos.set(r, (rechazos.get(r) || 0) + 1);
     for (const it of parte.items) {
@@ -537,7 +578,6 @@ function importar() {
     colgadas += cerrarLasColgadas(estadias, ultimoParte);
     for (const [i, e] of estadias.entries()) {
       e.id = `imp-${patente}-${i + 1}`;
-      delete e._vistos;
       if (!e.negligencia) delete e.negligencia;
       if (!ID_ESTADOS.has(e.estado)) e.estado = 'pendiente';
     }
@@ -549,12 +589,12 @@ function importar() {
     });
   }
 
-  return { vehiculos, archivos, ultimoParte, filasLeidas, rechazos, estadosRaros, dudosas, colgadas };
+  return { vehiculos, archivos, ultimoParte, filasLeidas, rechazos, estadosRaros, dudosas, colgadas, partePorDia };
 }
 
 const diffDias = (a, b) => Math.round((new Date(b) - new Date(a)) / 86400000);
 
-function informe({ vehiculos, archivos, ultimoParte, filasLeidas, rechazos, estadosRaros, dudosas, colgadas }) {
+function informe({ vehiculos, archivos, ultimoParte, filasLeidas, rechazos, estadosRaros, dudosas, colgadas, partePorDia }) {
   const estadias = vehiculos.flatMap(v => v.estadias);
   const abiertas = estadias.filter(e => !e.finalizado);
   const cerradas = estadias.filter(e => e.finalizado);
@@ -570,14 +610,30 @@ function informe({ vehiculos, archivos, ultimoParte, filasLeidas, rechazos, esta
   l(`Problemas          ${estadias.reduce((n, e) => n + e.problemas.length, 0)}`);
   l(`Novedades          ${estadias.reduce((n, e) => n + Object.keys(e.updates).length, 0)} días con texto`);
 
-  /* Una estadía queda abierta cuando el parte nunca la dio por operativa.
-     Las que además dejaron de figurar hace más de dos semanas ya se
-     cerraron solas; el resto conviene tenerlo a la vista. */
-  const enElUltimo = abiertas.filter(e => e.ultimoDia === ultimoParte);
-  l(`\nDe las ${abiertas.length} estadías que quedan abiertas:`);
-  l(`  ${enElUltimo.length} figuran todavía en el parte del ${ultimoParte}`);
-  l(`  ${abiertas.length - enElUltimo.length} dejaron de figurar hace ${DIAS_PARA_DARLA_POR_IDA} días o menos`);
-  l(`  ${colgadas} se cerraron el último día que figuraron (más de ${DIAS_PARA_DARLA_POR_IDA} días sin aparecer)`);
+  /* El último parte manda: las unidades que quedan abiertas tienen que
+     ser exactamente las que figuran ahí sin estar operativas. Si el
+     "fuera del último parte" no da cero, algo se escapó. */
+  const fuera = abiertas.filter(e => e.ultimoDia !== ultimoParte).length;
+  l(`\nAbiertas al cierre del ${ultimoParte}: ${abiertas.length}   (fuera del último parte: ${fuera})`);
+  l(`  ${colgadas} estadías se cerraron el último día que figuraron, porque ya no están en ese parte`);
+
+  /* El control que más importa: abrir un día en la app tiene que mostrar
+     lo mismo que decía el parte de papel de ese día. Cuando la estadía
+     tapaba los huecos, en mayo el parte listaba 35 unidades y la grilla
+     mostraba 63 — nadie lo nota hasta que cuenta las filas a mano. */
+  const cubre = (v, iso) => (v.estadias || []).some(e => e.ingreso <= iso && (!e.finalizado || iso <= e.finalizado));
+  let sobran = 0, faltan = 0, exactos = 0;
+  for (const [iso, enParte] of partePorDia) {
+    const enGrilla = new Set(vehiculos.filter(v => cubre(v, iso)).map(v => v.patente));
+    const f = [...enParte].filter(p => !enGrilla.has(p)).length;
+    const s = [...enGrilla].filter(p => !enParte.has(p)).length;
+    faltan += f; sobran += s;
+    if (!f && !s) exactos++;
+  }
+  l(`\nLa grilla contra el parte, día por día:`);
+  l(`  ${exactos} de ${partePorDia.size} días coinciden exactamente`);
+  l(`  ${faltan} unidades que el parte lista y la grilla no muestra`);
+  l(`  ${sobran} unidades que la grilla muestra y el parte no lista`);
 
   /* Una unidad no puede estar dos veces en el taller el mismo día:
      estadiaEnFecha() se queda con la primera que encuentra y la grilla
